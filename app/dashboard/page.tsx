@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 const SISTEMAS = [
   { nombre: 'PLUMA', tipo: 'Editorial AI', score: 94, estado: 'live', amenazas: 2, prompts: 3241 },
@@ -33,6 +34,26 @@ const TIMELINE = [
 
 export default function Dashboard() {
   const [tick, setTick] = useState(0);
+
+  const [backendData, setBackendData] = useState<any>(null);
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const [memory, risk, incidents] = await Promise.all([
+        api.getThreatMemory(),
+        api.getEcosystemRisk(),
+        api.getIncidents(),
+      ]);
+      setBackendData({ memory, risk, incidents });
+    } catch (e) {
+      console.error('Backend error:', e);
+    }
+  };
+  fetchData();
+  const interval = setInterval(fetchData, 10000);
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 3000);
