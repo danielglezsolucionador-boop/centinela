@@ -60,11 +60,12 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, []);
 
-  const globalScore = 84;
-  const threatsHoy = 247;
-  const promptsAnalizados = 18432 + tick * 3;
-  const bloqueados = 241;
-  const agentesActivos = 7;
+  const globalScore = backendData?.memory ? 
+  Math.max(0, 100 - Math.round((backendData.memory.threat_events / Math.max(backendData.memory.total_events, 1)) * 100)) : 84;
+const threatsHoy = backendData?.memory?.blocked_events ?? 247;
+const promptsAnalizados = backendData?.memory?.total_events ? backendData.memory.total_events + 18432 : 18432 + tick * 3;
+const bloqueados = backendData?.memory?.blocked_events ?? 241;
+const agentesActivos = backendData?.risk?.agents ? Object.keys(backendData.risk.agents).length : 7;
 
   return (
     <div className="animate-fadeIn">
