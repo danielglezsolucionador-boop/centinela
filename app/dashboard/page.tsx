@@ -256,7 +256,7 @@ export default function Dashboard() {
               <div key={t.tool} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="terminal-text">{t.tool}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.calls.toLocaleString()}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.calls}</span>
                   <span className={`badge ${
                     t.riesgo === 'CRITICAL' ? 'badge-red' :
                     t.riesgo === 'HIGH' ? 'badge-yellow' :
