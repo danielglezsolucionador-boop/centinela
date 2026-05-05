@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 const FALLBACK_INCIDENTS = [
   {
@@ -118,14 +119,11 @@ export default function Incidentes() {
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch('/api/incidents');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.incidents?.length) {
-            setIncidents(data.incidents);
-            setActive(data.incidents[0].id);
-            setIsLive(true);
-          }
+        const data = await api.getIncidents();
+        if (Array.isArray(data) && data.length > 0) {
+          setIncidents(data);
+          setActive(data[0].id);
+          setIsLive(true);
         }
       } catch (e) {}
     }
