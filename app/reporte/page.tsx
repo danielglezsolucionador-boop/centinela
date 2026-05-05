@@ -23,31 +23,31 @@ const TIMELINE = [
 ];
 
 const TOP_RISKS = [
-  { agent: 'SUNAT API',   risk: 8.8, cat: 'Unauthorized Access', status: 'CRITICAL', delta: '+2.1' },
-  { agent: 'MCF',         risk: 8.1, cat: 'API Abuse',           status: 'CRITICAL', delta: '+1.2' },
-  { agent: 'Cerebro',     risk: 7.9, cat: 'Prompt Injection',    status: 'HIGH',     delta: '-0.3' },
-  { agent: 'PLUMA',       risk: 7.4, cat: 'Data Leakage',        status: 'HIGH',     delta: '+0.8' },
-  { agent: 'Laboratorio', risk: 6.4, cat: 'Tool Abuse',          status: 'MEDIUM',   delta: '-0.5' },
-  { agent: 'Sniff Amazon',risk: 4.8, cat: 'Rate Limit',          status: 'LOW',      delta: '+0.1' },
+  { agent: 'SUNAT API',    risk: 8.8, cat: 'Unauthorized Access', status: 'CRITICAL', delta: '+2.1' },
+  { agent: 'MCF',          risk: 8.1, cat: 'API Abuse',           status: 'CRITICAL', delta: '+1.2' },
+  { agent: 'Cerebro',      risk: 7.9, cat: 'Prompt Injection',    status: 'HIGH',     delta: '-0.3' },
+  { agent: 'PLUMA',        risk: 7.4, cat: 'Data Leakage',        status: 'HIGH',     delta: '+0.8' },
+  { agent: 'Laboratorio',  risk: 6.4, cat: 'Tool Abuse',          status: 'MEDIUM',   delta: '-0.5' },
+  { agent: 'Sniff Amazon', risk: 4.8, cat: 'Rate Limit',          status: 'LOW',      delta: '+0.1' },
 ];
 
 const COMPLIANCE = [
-  { label: 'AI Governance Policy',       score: 91, status: 'PASS' },
-  { label: 'Data Residency Controls',    score: 78, status: 'PASS' },
-  { label: 'Prompt Audit Trail',         score: 85, status: 'PASS' },
-  { label: 'Agent Permission Audit',     score: 67, status: 'WARN' },
-  { label: 'PII Leak Prevention',        score: 54, status: 'FAIL' },
-  { label: 'Incident Response SLA',      score: 82, status: 'PASS' },
-  { label: 'Model Usage Governance',     score: 73, status: 'PASS' },
-  { label: 'Tool-Call Whitelisting',     score: 61, status: 'WARN' },
+  { label: 'AI Governance Policy',    score: 91, status: 'PASS' },
+  { label: 'Data Residency Controls', score: 78, status: 'PASS' },
+  { label: 'Prompt Audit Trail',      score: 85, status: 'PASS' },
+  { label: 'Agent Permission Audit',  score: 67, status: 'WARN' },
+  { label: 'PII Leak Prevention',     score: 54, status: 'FAIL' },
+  { label: 'Incident Response SLA',   score: 82, status: 'PASS' },
+  { label: 'Model Usage Governance',  score: 73, status: 'PASS' },
+  { label: 'Tool-Call Whitelisting',  score: 61, status: 'WARN' },
 ];
 
 const RECS = [
-  { p: 'P1', title: 'Patch SUNAT API exposure vector',        detail: 'MCF agent tiene llamadas salientes sin restricción a SUNAT. Implementar allowlist estricto y rate limits inmediatamente.', impact: 'CRITICAL', effort: 'LOW'    },
-  { p: 'P1', title: 'Deploy PII scanner en outputs de Cerebro', detail: 'PII prevention score en 54%. Desplegar scanner inline antes de que respuestas lleguen a agentes downstream.',            impact: 'HIGH',     effort: 'MEDIUM' },
-  { p: 'P2', title: 'Revisar scope de permisos de agentes',   detail: 'PLUMA y Cerebro tienen permisos de tool-call solapados. Auditar y restringir a modelo least-privilege.',                   impact: 'HIGH',     effort: 'LOW'    },
-  { p: 'P2', title: 'Habilitar correlación cross-agent',      detail: 'Sin reglas de correlación entre Laboratorio y Cerebro. Riesgo de prompt injection encadenado no detectado.',              impact: 'MEDIUM',   effort: 'MEDIUM' },
-  { p: 'P3', title: 'Implementar tool-call whitelisting',     detail: 'Buscador y Sniff tienen invocación abierta. Whitelistear firmas de herramientas aprobadas por agente.',                   impact: 'MEDIUM',   effort: 'LOW'    },
+  { p: 'P1', title: 'Patch SUNAT API exposure vector',          detail: 'MCF agent tiene llamadas salientes sin restricción a SUNAT. Implementar allowlist estricto y rate limits inmediatamente.', impact: 'CRITICAL', effort: 'LOW'    },
+  { p: 'P1', title: 'Deploy PII scanner en outputs de Cerebro', detail: 'PII prevention score en 54%. Desplegar scanner inline antes de que respuestas lleguen a agentes downstream.',             impact: 'HIGH',     effort: 'MEDIUM' },
+  { p: 'P2', title: 'Revisar scope de permisos de agentes',     detail: 'PLUMA y Cerebro tienen permisos de tool-call solapados. Auditar y restringir a modelo least-privilege.',                    impact: 'HIGH',     effort: 'LOW'    },
+  { p: 'P2', title: 'Habilitar correlación cross-agent',        detail: 'Sin reglas de correlación entre Laboratorio y Cerebro. Riesgo de prompt injection encadenado no detectado.',               impact: 'MEDIUM',   effort: 'MEDIUM' },
+  { p: 'P3', title: 'Implementar tool-call whitelisting',       detail: 'Buscador y Sniff tienen invocación abierta. Whitelistear firmas de herramientas aprobadas por agente.',                    impact: 'MEDIUM',   effort: 'LOW'    },
 ];
 
 const ATTACK_TYPES = [
@@ -101,8 +101,22 @@ export default function Reporte() {
   const [period, setPeriod] = useState<Period>('Last 7 days');
   const [section, setSection] = useState<Section>('overview');
   const [exporting, setExporting] = useState(false);
+  const [isLive, setIsLive] = useState(false);
   const d = DATA[period];
   const maxDet = Math.max(...TIMELINE.map(t => t.detected));
+
+  useEffect(() => {
+    async function cargar() {
+      try {
+        const res = await fetch('/api/incidents');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.length) setIsLive(true);
+        }
+      } catch (e) {}
+    }
+    cargar();
+  }, []);
 
   function handleExport() {
     setExporting(true);
@@ -120,8 +134,8 @@ export default function Reporte() {
           <span style={{ color:'#7A9A80' }}>Executive Security Layer</span>
         </div>
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px' }}>
-          <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#00FF88', boxShadow:'0 0 8px #00FF88', animation:'pulse 2s infinite' }}/>
-          <span style={{ fontFamily:'Syne,sans-serif', fontSize:'11px', color:'#7A9A80', letterSpacing:'1px' }}>LIVE REPORT</span>
+          <div style={{ width:'7px', height:'7px', borderRadius:'50%', background: isLive ? '#00FF88' : '#3A5A40', boxShadow: isLive ? '0 0 8px #00FF88' : 'none', animation: isLive ? 'pulse 2s infinite' : 'none' }}/>
+          <span style={{ fontFamily:'Syne,sans-serif', fontSize:'11px', color:'#7A9A80', letterSpacing:'1px' }}>{isLive ? 'BACKEND LIVE' : 'LIVE REPORT'}</span>
         </div>
       </div>
 
@@ -144,11 +158,10 @@ export default function Reporte() {
       {/* Body */}
       <div style={{ overflow:'auto', padding:'20px' }}>
 
-        {/* ── OVERVIEW ── */}
+        {/* OVERVIEW */}
         {section === 'overview' && (
           <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
 
-            {/* Header card */}
             <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
               <div>
                 <div style={{ fontFamily:'Syne,sans-serif', fontSize:'18px', fontWeight:800, color:'#E8F5EE', letterSpacing:'2px', marginBottom:'6px' }}>CENTINELA EXECUTIVE SECURITY REPORT</div>
@@ -163,7 +176,6 @@ export default function Reporte() {
               </div>
             </div>
 
-            {/* Gauges */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:'10px' }}>
               {[
                 { value: d.secScore,   label: 'SECURITY SCORE'   },
@@ -177,17 +189,16 @@ export default function Reporte() {
               ))}
             </div>
 
-            {/* KPI grid */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(155px,1fr))', gap:'8px' }}>
               {[
-                { label:'THREATS DETECTED',  val: d.threats.toLocaleString(),   color:'#FF3333', sub:'Total flagged'         },
-                { label:'THREATS MITIGATED', val: d.mitigated.toLocaleString(), color:'#00FF88', sub:'Auto-contained'        },
-                { label:'CRITICAL INCIDENTS',val: d.critical,                   color:'#FF3333', sub:'Immediate action'      },
-                { label:'HIGH INCIDENTS',    val: d.high,                       color:'#FF8800', sub:'Priority review'       },
-                { label:'PROMPTS ANALYZED',  val: d.prompts.toLocaleString(),   color:'#00AAFF', sub:'Runtime inspection'    },
-                { label:'ATTACKS BLOCKED',   val: d.mitigated.toLocaleString(), color:'#00FF88', sub:'Response engine'       },
-                { label:'DATA LEAKS',        val: d.leaks,                      color:'#FF8800', sub:'PII / secrets exposed' },
-                { label:'AVG RISK SCORE',    val: d.avgRisk.toFixed(1),         color: rc(d.avgRisk), sub:'Ecosystem-wide'   },
+                { label:'THREATS DETECTED',  val: d.threats,   color:'#FF3333', sub:'Total flagged'         },
+                { label:'THREATS MITIGATED', val: d.mitigated, color:'#00FF88', sub:'Auto-contained'        },
+                { label:'CRITICAL INCIDENTS',val: d.critical,  color:'#FF3333', sub:'Immediate action'      },
+                { label:'HIGH INCIDENTS',    val: d.high,      color:'#FF8800', sub:'Priority review'       },
+                { label:'PROMPTS ANALYZED',  val: d.prompts,   color:'#00AAFF', sub:'Runtime inspection'    },
+                { label:'ATTACKS BLOCKED',   val: d.mitigated, color:'#00FF88', sub:'Response engine'       },
+                { label:'DATA LEAKS',        val: d.leaks,     color:'#FF8800', sub:'PII / secrets exposed' },
+                { label:'AVG RISK SCORE',    val: d.avgRisk.toFixed(1), color: rc(d.avgRisk), sub:'Ecosystem-wide' },
               ].map((k, i) => (
                 <div key={i} style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'14px 16px' }}>
                   <div style={{ fontSize:'9px', fontFamily:'Syne,sans-serif', color:'#3A5A40', letterSpacing:'2px', marginBottom:'8px' }}>{k.label}</div>
@@ -197,7 +208,6 @@ export default function Reporte() {
               ))}
             </div>
 
-            {/* Risk timeline */}
             <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 20px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
                 <div style={{ fontSize:'10px', fontFamily:'Syne,sans-serif', color:'#3A5A40', letterSpacing:'2px' }}>RISK TIMELINE — LAST 4 WEEKS</div>
@@ -225,12 +235,11 @@ export default function Reporte() {
               </div>
             </div>
 
-            {/* Executive summary */}
             <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 20px' }}>
               <div style={{ fontSize:'10px', fontFamily:'Syne,sans-serif', color:'#00CC6A', letterSpacing:'2px', marginBottom:'12px' }}>EXECUTIVE SUMMARY</div>
               <p style={{ fontSize:'13px', color:'#B0C8B8', lineHeight:1.7, margin:0, maxWidth:'860px' }}>
                 Durante <strong style={{ color:'#E8F5EE' }}>{period.toLowerCase()}</strong>, Centinela monitoreó <strong style={{ color:'#00FF88' }}>8 agentes IA autónomos</strong> analizando{' '}
-                <strong style={{ color:'#00AAFF' }}>{d.prompts.toLocaleString()} prompts</strong> en runtime. Se detectaron{' '}
+                <strong style={{ color:'#00AAFF' }}>{d.prompts} prompts</strong> en runtime. Se detectaron{' '}
                 <strong style={{ color:'#FF3333' }}>{d.threats} amenazas</strong>, de las cuales{' '}
                 <strong style={{ color:'#00FF88' }}>{d.mitigated} ({Math.round((d.mitigated/d.threats)*100)}%)</strong> fueron mitigadas automáticamente por el Response Engine.{' '}
                 <strong style={{ color:'#FF3333' }}>{d.critical} incidentes críticos</strong> requieren remediación inmediata. La postura de seguridad está{' '}
@@ -241,7 +250,7 @@ export default function Reporte() {
           </div>
         )}
 
-        {/* ── RISKS ── */}
+        {/* RISKS */}
         {section === 'risks' && (
           <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
             <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 20px' }}>
@@ -291,11 +300,11 @@ export default function Reporte() {
               <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 20px' }}>
                 <div style={{ fontSize:'10px', fontFamily:'Syne,sans-serif', color:'#00CC6A', letterSpacing:'2px', marginBottom:'14px' }}>THREAT ORIGIN ANALYSIS</div>
                 {[
-                  { origin:'External API calls',  risk:'HIGH',   count:22 },
-                  { origin:'Prompt inputs',        risk:'HIGH',   count:18 },
-                  { origin:'Tool callbacks',       risk:'MEDIUM', count:9  },
-                  { origin:'Workflow triggers',    risk:'MEDIUM', count:6  },
-                  { origin:'Agent-to-agent',       risk:'LOW',    count:3  },
+                  { origin:'External API calls', risk:'HIGH',   count:22 },
+                  { origin:'Prompt inputs',       risk:'HIGH',   count:18 },
+                  { origin:'Tool callbacks',      risk:'MEDIUM', count:9  },
+                  { origin:'Workflow triggers',   risk:'MEDIUM', count:6  },
+                  { origin:'Agent-to-agent',      risk:'LOW',    count:3  },
                 ].map((o,i)=>(
                   <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #1A2A1A' }}>
                     <div>
@@ -310,7 +319,7 @@ export default function Reporte() {
           </div>
         )}
 
-        {/* ── COMPLIANCE ── */}
+        {/* COMPLIANCE */}
         {section === 'compliance' && (
           <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
             <div style={{ background:'#0A110A', border:'1px solid #1A2A1A', borderRadius:'4px', padding:'18px 20px' }}>
@@ -348,7 +357,7 @@ export default function Reporte() {
           </div>
         )}
 
-        {/* ── RECOMMENDATIONS ── */}
+        {/* RECOMMENDATIONS */}
         {section === 'recommendations' && (
           <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
             <div style={{ fontSize:'10px', fontFamily:'Syne,sans-serif', color:'#3A5A40', letterSpacing:'2px', marginBottom:'4px' }}>PRIORITIZED SECURITY RECOMMENDATIONS — {RECS.length} ACTION ITEMS</div>

@@ -63,11 +63,25 @@ export default function Grafo() {
   const [filter, setFilter] = useState<'ALL' | 'AGENT' | 'API' | 'DATABASE' | 'THREAT'>('ALL');
   const [showAttacks, setShowAttacks] = useState(true);
   const [tick, setTick] = useState(0);
+  const [isLive, setIsLive] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     const t = setInterval(() => setTick(p => p + 1), 1500);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    async function cargar() {
+      try {
+        const res = await fetch('/api/correlations/active');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.length) setIsLive(true);
+        }
+      } catch (e) {}
+    }
+    cargar();
   }, []);
 
   const sel = nodes.find(n => n.id === selectedNode);
@@ -91,8 +105,8 @@ export default function Grafo() {
           <span style={{ color: '#7A9A80' }}>Security Graph Intelligence</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 8px #00FF88', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '11px', color: '#7A9A80', letterSpacing: '1px' }}>GRAPH LIVE</span>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: isLive ? '#00FF88' : '#3A5A40', boxShadow: isLive ? '0 0 8px #00FF88' : 'none', animation: isLive ? 'pulse 2s infinite' : 'none' }} />
+          <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '11px', color: '#7A9A80', letterSpacing: '1px' }}>{isLive ? 'BACKEND LIVE' : 'GRAPH LIVE'}</span>
         </div>
       </div>
 

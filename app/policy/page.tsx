@@ -1,25 +1,25 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const policies = [
   {
     id: 'POL001', name: 'No PII en outputs', category: 'DATA', severity: 'CRITICAL', status: 'ACTIVE',
     scope: 'ALL_AGENTS', enforced: true, violations: 3, lastTriggered: '21:44:09',
-    description: 'Bloquea cualquier respuesta que contenga información personal identificable.',
-    rules: ['No emails en output', 'No números de teléfono', 'No DNI/RUC', 'No datos bancarios'],
+    description: 'Bloquea cualquier respuesta que contenga informacion personal identificable.',
+    rules: ['No emails en output', 'No numeros de telefono', 'No DNI/RUC', 'No datos bancarios'],
     action: 'BLOCK'
   },
   {
-    id: 'POL002', name: 'Límite de tool calls', category: 'OPERATIONAL', severity: 'HIGH', status: 'ACTIVE',
+    id: 'POL002', name: 'Limite de tool calls', category: 'OPERATIONAL', severity: 'HIGH', status: 'ACTIVE',
     scope: 'ALL_AGENTS', enforced: true, violations: 7, lastTriggered: '21:41:02',
-    description: 'Limita el número de tool calls por agente por hora para prevenir abuso.',
-    rules: ['Max 100 calls/hora por agente', 'Max 500 calls/día', 'Alert en >80% del límite'],
+    description: 'Limita el numero de tool calls por agente por hora para prevenir abuso.',
+    rules: ['Max 100 calls/hora por agente', 'Max 500 calls/dia', 'Alert en >80% del limite'],
     action: 'RATE_LIMIT'
   },
   {
     id: 'POL003', name: 'Acceso financiero horario', category: 'COMPLIANCE', severity: 'HIGH', status: 'ACTIVE',
     scope: 'MCF', enforced: true, violations: 1, lastTriggered: '21:35:21',
-    description: 'MCF solo puede acceder a datos financieros en horario laboral Perú.',
+    description: 'MCF solo puede acceder a datos financieros en horario laboral Peru.',
     rules: ['Acceso: 08:00-18:00 PET', 'No acceso fines de semana', 'Alert en acceso nocturno'],
     action: 'BLOCK'
   },
@@ -27,21 +27,21 @@ const policies = [
     id: 'POL004', name: 'Anti-jailbreak', category: 'SECURITY', severity: 'CRITICAL', status: 'ACTIVE',
     scope: 'ALL_AGENTS', enforced: true, violations: 22, lastTriggered: '21:30:09',
     description: 'Detecta y bloquea intentos de jailbreak en todos los agentes.',
-    rules: ['Score jailbreak > 90% → block', 'Detectar role manipulation', 'Detectar hidden instructions'],
+    rules: ['Score jailbreak > 90% bloquear', 'Detectar role manipulation', 'Detectar hidden instructions'],
     action: 'BLOCK'
   },
   {
     id: 'POL005', name: 'Governance de modelos', category: 'GOVERNANCE', severity: 'MEDIUM', status: 'ACTIVE',
     scope: 'ALL_AGENTS', enforced: true, violations: 0, lastTriggered: 'never',
     description: 'Solo modelos aprobados pueden ser usados por los agentes.',
-    rules: ['Whitelist: claude-sonnet-4, claude-haiku-4', 'Blacklist: GPT-4, Gemini sin aprobación', 'Alert en modelo nuevo'],
+    rules: ['Whitelist: claude-sonnet-4, claude-haiku-4', 'Blacklist: GPT-4, Gemini sin aprobacion', 'Alert en modelo nuevo'],
     action: 'ALERT'
   },
   {
-    id: 'POL006', name: 'Protección de secrets', category: 'SECURITY', severity: 'CRITICAL', status: 'ACTIVE',
+    id: 'POL006', name: 'Proteccion de secrets', category: 'SECURITY', severity: 'CRITICAL', status: 'ACTIVE',
     scope: 'ALL_AGENTS', enforced: true, violations: 5, lastTriggered: '20:12:40',
     description: 'Previene que API keys y secrets sean expuestos en outputs o logs.',
-    rules: ['Detectar patrones de API keys', 'Redactar secrets en logs', 'Alert en exposición'],
+    rules: ['Detectar patrones de API keys', 'Redactar secrets en logs', 'Alert en exposicion'],
     action: 'REDACT'
   },
 ];
@@ -71,6 +71,20 @@ const actionColor: Record<string, string> = {
 export default function PolicyEngine() {
   const [selected, setSelected] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'policies' | 'compliance'>('policies');
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    async function cargar() {
+      try {
+        const res = await fetch('/api/policies');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.policies?.length) setIsLive(true);
+        }
+      } catch (e) {}
+    }
+    cargar();
+  }, []);
 
   const selectedPolicy = policies.find(p => p.id === selected);
 
@@ -81,11 +95,10 @@ export default function PolicyEngine() {
   return (
     <div style={{ background: '#050A05', minHeight: '100vh', color: 'white', fontFamily: 'Plus Jakarta Sans, sans-serif', padding: '32px' }}>
 
-      {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 12px #00FF88' }} />
-          <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>POLICY ENGINE — {policies.filter(p => p.status === 'ACTIVE').length} POLÍTICAS ACTIVAS</span>
+          <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>POLICY ENGINE — {policies.filter(p => p.status === 'ACTIVE').length} POLITICAS ACTIVAS {isLive && '· BACKEND'}</span>
         </div>
         <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(135deg, #00FF88, #00AAFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
           AI Policy Engine
@@ -93,13 +106,12 @@ export default function PolicyEngine() {
         <p style={{ color: '#4A5568', fontSize: '14px', marginTop: '4px' }}>Governance, compliance y enforcement en tiempo real</p>
       </div>
 
-      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
         {[
           { label: 'Compliance Score', value: `${complianceScore}%`, color: complianceScore > 80 ? '#00FF88' : '#FF8800' },
-          { label: 'Políticas activas', value: policies.filter(p => p.status === 'ACTIVE').length, color: '#00FF88' },
+          { label: 'Politicas activas', value: policies.filter(p => p.status === 'ACTIVE').length, color: '#00FF88' },
           { label: 'Violaciones totales', value: policies.reduce((s, p) => s + p.violations, 0), color: '#FF3333' },
-          { label: 'Políticas críticas', value: policies.filter(p => p.severity === 'CRITICAL').length, color: '#FF8800' },
+          { label: 'Politicas criticas', value: policies.filter(p => p.severity === 'CRITICAL').length, color: '#FF8800' },
         ].map((stat, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '28px', fontWeight: 800, color: stat.color, fontFamily: 'monospace' }}>{stat.value}</div>
@@ -108,11 +120,10 @@ export default function PolicyEngine() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
         {(['policies', 'compliance'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: activeTab === tab ? '#00FF88' : 'rgba(255,255,255,0.05)', color: activeTab === tab ? '#050A05' : '#4A5568' }}>
-            {tab === 'policies' ? '📋 Políticas' : '✅ Compliance'}
+            {tab === 'policies' ? 'Politicas' : 'Compliance'}
           </button>
         ))}
       </div>
@@ -148,12 +159,12 @@ export default function PolicyEngine() {
                 <div style={{ fontSize: '16px', fontWeight: 700 }}>{selectedPolicy.name}</div>
                 <div style={{ fontSize: '13px', color: '#94A3B8', lineHeight: 1.6 }}>{selectedPolicy.description}</div>
                 {[
-                  { label: 'Categoría', value: selectedPolicy.category },
+                  { label: 'Categoria', value: selectedPolicy.category },
                   { label: 'Severidad', value: selectedPolicy.severity },
                   { label: 'Alcance', value: selectedPolicy.scope },
-                  { label: 'Acción', value: selectedPolicy.action },
+                  { label: 'Accion', value: selectedPolicy.action },
                   { label: 'Violaciones', value: String(selectedPolicy.violations) },
-                  { label: 'Último trigger', value: selectedPolicy.lastTriggered },
+                  { label: 'Ultimo trigger', value: selectedPolicy.lastTriggered },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '10px' }}>
                     <span style={{ fontSize: '12px', color: '#4A5568' }}>{item.label}</span>
@@ -190,7 +201,7 @@ export default function PolicyEngine() {
                   <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>{policy.name}</div>
                   <div style={{ fontSize: '11px', color: '#4A5568' }}>{policy.category}</div>
                 </div>
-                <span style={{ fontSize: '20px' }}>{policy.violations === 0 ? '✅' : '⚠️'}</span>
+                <span style={{ fontSize: '20px' }}>{policy.violations === 0 ? '✓' : '!'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span style={{ color: '#4A5568' }}>Violaciones</span>
