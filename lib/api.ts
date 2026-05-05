@@ -65,6 +65,26 @@ export const api = {
     const res = await fetch(`${API_URL}/api/v1/stats/db`, { headers: authHeaders() });
     return res.json();
   },
+  async getObservabilityMetrics() {
+    const res = await fetch(`${API_URL}/api/v1/observability/metrics`, { headers: authHeaders() });
+    return res.json();
+  },
+  async getAgentMap() {
+    const res = await fetch(`${API_URL}/api/v1/agents/map`, { headers: authHeaders() });
+    return res.json();
+  },
+  async getAgentAnomalies() {
+    const res = await fetch(`${API_URL}/api/v1/agents/anomalies`, { headers: authHeaders() });
+    return res.json();
+  },
+  async getDetectionStats() {
+    const res = await fetch(`${API_URL}/api/v1/detection/stats`, { headers: authHeaders() });
+    return res.json();
+  },
+  async getPolicyStats() {
+    const res = await fetch(`${API_URL}/api/v1/policy/stats`, { headers: authHeaders() });
+    return res.json();
+  },
 };
 
 export function createWebSocket(onMessage: (data: unknown) => void) {
