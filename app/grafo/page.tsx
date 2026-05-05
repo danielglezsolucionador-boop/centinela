@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { api } from '@/lib/api';
 
 const nodes = [
   { id: 'cerebro', label: 'Cerebro', type: 'AGENT', risk: 9.2, x: 400, y: 280, connections: 7, status: 'ALERT' },
@@ -74,11 +75,8 @@ export default function Grafo() {
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch('/api/correlations/active');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.length) setIsLive(true);
-        }
+        const data = await api.getCorrelations();
+        if (data?.length) setIsLive(true);
       } catch (e) {}
     }
     cargar();
