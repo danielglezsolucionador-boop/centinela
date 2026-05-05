@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 const policies = [
   {
@@ -76,11 +77,8 @@ export default function PolicyEngine() {
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch('/api/policies');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.policies?.length) setIsLive(true);
-        }
+        const data = await api.getPolicyStats();
+        if (data) setIsLive(true);
       } catch (e) {}
     }
     cargar();
