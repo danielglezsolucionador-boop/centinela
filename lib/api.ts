@@ -50,7 +50,7 @@ export const api = {
     return res.json();
   },
   async getThreatMemory() {
-    const res = await fetch(`${API_URL}/api/v1/threat-memory`, { headers: authHeaders() });
+    const res = await fetch(`${API_URL}/api/v1/stats/db`, { headers: authHeaders() });
     return res.json();
   },
   async getIncidents() {
