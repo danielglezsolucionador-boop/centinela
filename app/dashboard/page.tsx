@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api, ensureToken } from '@/lib/api';
 
 const SISTEMAS = [
   { nombre: 'PLUMA', tipo: 'Editorial AI', score: 94, estado: 'live', amenazas: 2, prompts: 3241 },
@@ -40,6 +40,7 @@ export default function Dashboard() {
 useEffect(() => {
   const fetchData = async () => {
     try {
+      await ensureToken();
       const [memory, risk, incidents] = await Promise.all([
         api.getThreatMemory(),
         api.getEcosystemRisk(),
