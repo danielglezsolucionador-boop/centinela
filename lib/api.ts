@@ -90,7 +90,7 @@ export const api = {
     return res.json();
   },
   async getPolicyStats() {
-    const res = await fetch(`${API_URL}/api/v1/policy/stats`, { headers: authHeaders() });
+    const res = await fetch(`${API_URL}/api/v1/policy/all`, { headers: authHeaders() });
     return res.json();
   },
 };
