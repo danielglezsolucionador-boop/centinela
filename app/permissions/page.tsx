@@ -1,198 +1,122 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
+import { api, ensureToken } from '@/lib/api';
 
-const agentPermissions = [
-  {
-    id: 'AGT001', name: 'PLUMA', model: 'claude-sonnet-4', status: 'MONITORED',
-    permissions: [
-      { name: 'write:content', level: 'WRITE', resource: 'Content DB', granted: true, lastUsed: '21:44:09', uses: 342 },
-      { name: 'read:trends', level: 'READ', resource: 'Buscador API', granted: true, lastUsed: '21:43:55', uses: 128 },
-      { name: 'publish:web', level: 'EXECUTE', resource: 'Web Publisher', granted: false, lastUsed: '21:44:09', uses: 14 },
-      { name: 'access:anthropic', level: 'API', resource: 'Anthropic API', granted: true, lastUsed: '21:44:01', uses: 892 },
-    ]
-  },
-  {
-    id: 'AGT002', name: 'Laboratorio', model: 'claude-sonnet-4', status: 'ISOLATED',
-    permissions: [
-      { name: 'read:analytics', level: 'READ', resource: 'Analytics DB', granted: true, lastUsed: '21:41:02', uses: 67 },
-      { name: 'post:social', level: 'EXECUTE', resource: 'Social APIs', granted: false, lastUsed: '21:41:02', uses: 23 },
-      { name: 'read:contacts', level: 'READ', resource: 'CRM', granted: false, lastUsed: '21:38:44', uses: 8 },
-    ]
-  },
-  {
-    id: 'AGT003', name: 'Buscador', model: 'claude-haiku-4', status: 'ACTIVE',
-    permissions: [
-      { name: 'search:web', level: 'READ', resource: 'ScrapeCreators API', granted: true, lastUsed: '21:48:33', uses: 892 },
-      { name: 'read:rss', level: 'READ', resource: 'RSS Feeds', granted: true, lastUsed: '21:47:11', uses: 445 },
-      { name: 'write:cache', level: 'WRITE', resource: 'Cache DB', granted: true, lastUsed: '21:48:33', uses: 892 },
-    ]
-  },
-  {
-    id: 'AGT004', name: 'MCF', model: 'claude-sonnet-4', status: 'MONITORED',
-    permissions: [
-      { name: 'read:financial', level: 'READ', resource: 'Financial DB', granted: true, lastUsed: '21:35:21', uses: 34 },
-      { name: 'write:reports', level: 'WRITE', resource: 'Reports DB', granted: true, lastUsed: '21:30:09', uses: 12 },
-      { name: 'access:sunat', level: 'API', resource: 'SUNAT API', granted: true, lastUsed: '21:35:21', uses: 7 },
-      { name: 'transfer:funds', level: 'EXECUTE', resource: 'Banking API', granted: false, lastUsed: 'never', uses: 0 },
-    ]
-  },
-  {
-    id: 'AGT005', name: 'Cerebro', model: 'claude-sonnet-4', status: 'ACTIVE',
-    permissions: [
-      { name: 'orchestrate:all', level: 'ADMIN', resource: 'All Agents', granted: true, lastUsed: '21:49:01', uses: 1247 },
-      { name: 'read:all', level: 'READ', resource: 'All Systems', granted: true, lastUsed: '21:49:01', uses: 3421 },
-      { name: 'write:logs', level: 'WRITE', resource: 'Log DB', granted: true, lastUsed: '21:49:01', uses: 2891 },
-    ]
-  },
-];
-
-const auditLog = [
-  { time: '21:44:09', agent: 'PLUMA', action: 'REVOKED', permission: 'publish:web', by: 'CENTINELA AUTO', reason: 'Prompt injection detectado' },
-  { time: '21:41:02', agent: 'Laboratorio', action: 'REVOKED', permission: 'post:social', by: 'CENTINELA AUTO', reason: 'Tool call anomalo' },
-  { time: '21:35:21', agent: 'MCF', action: 'RESTRICTED', permission: 'access:sunat', by: 'Daniel Gonzalez', reason: 'Acceso fuera de horario' },
-  { time: '21:00:00', agent: 'Sniff Amazon', action: 'BLOCKED ALL', permission: 'ALL', by: 'CENTINELA AUTO', reason: 'Comportamiento malicioso' },
-  { time: '20:30:00', agent: 'Buscador', action: 'GRANTED', permission: 'write:cache', by: 'Daniel Gonzalez', reason: 'Actualizacion de permisos' },
-];
-
-const levelColor: Record<string, string> = {
-  READ: '#00AAFF',
-  WRITE: '#FFD700',
-  EXECUTE: '#FF8800',
-  API: '#A855F7',
-  ADMIN: '#FF3333',
-};
-
-const statusColor: Record<string, string> = {
-  ACTIVE: '#00FF88',
-  MONITORED: '#FFD700',
-  ISOLATED: '#FF8800',
-  BLOCKED: '#FF3333',
-};
-
-const actionColor: Record<string, string> = {
-  GRANTED: '#00FF88',
-  REVOKED: '#FF3333',
-  RESTRICTED: '#FFD700',
-  'BLOCKED ALL': '#FF3333',
-};
+const levelColor: Record<string, string> = { READ:'#00AAFF', WRITE:'#FFD700', EXECUTE:'#FF8800', API:'#A855F7', ADMIN:'#FF3333' };
+const statusColor: Record<string, string> = { ACTIVE:'#00FF88', MONITORED:'#FFD700', ISOLATED:'#FF8800', BLOCKED:'#FF3333', SUSPICIOUS:'#FF8800', NORMAL:'#00FF88' };
 
 export default function Permissions() {
-  const [selected, setSelected] = useState<string>('AGT001');
-  const [activeTab, setActiveTab] = useState<'matrix' | 'audit'>('matrix');
-  const [isLive, setIsLive] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [selected, setSelected] = useState<string|null>(null);
+  const [loading, setLoading] = useState(true);
+  const [waking, setWaking] = useState(false);
 
   useEffect(() => {
-    async function cargar() {
+    const fetchAll = async () => {
+      await ensureToken();
+      const timeout = setTimeout(() => setWaking(true), 5000);
       try {
-        const res = await fetch('/api/permissions');
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.agents?.length) setIsLive(true);
-        }
-      } catch (e) {}
-    }
-    cargar();
+        const ag = await api.getAgentMap();
+        setAgents(Array.isArray(ag) ? ag : []);
+        if (ag?.length) setSelected(ag[0].name);
+        setWaking(false);
+      } catch { setWaking(true); }
+      finally { clearTimeout(timeout); setLoading(false); }
+    };
+    fetchAll();
   }, []);
 
-  const agent = agentPermissions.find(a => a.id === selected);
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',flexDirection:'column',gap:'16px'}}>
+      <div style={{fontSize:'13px',color:'var(--text-muted)'}}>{waking?'Runtime waking up...':'Loading...'}</div>
+    </div>
+  );
+
+  const agent = agents.find(a => a.name === selected);
 
   return (
-    <div style={{ background: '#050A05', minHeight: '100vh', color: 'white', fontFamily: 'Plus Jakarta Sans, sans-serif', padding: '32px' }}>
-
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 12px #00FF88' }} />
-          <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>PERMISSION SYSTEM — CONTROL TOTAL {isLive && '· BACKEND'}</span>
+    <div className="animate-fadeIn">
+      <div style={{marginBottom:'24px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'6px'}}>
+          <h1 className="font-syne" style={{fontSize:'22px',fontWeight:800,color:'#E8F5E8'}}>AGENT PERMISSIONS</h1>
+          <span className="badge badge-green">ACTIVO</span>
         </div>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(135deg, #00FF88, #00AAFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
-          Agent Permissions
-        </h1>
-        <p style={{ color: '#4A5568', fontSize: '14px', marginTop: '4px' }}>Control granular de permisos por agente, recurso y accion</p>
+        <p style={{fontSize:'13px',color:'var(--text-secondary)'}}>Control de permisos y herramientas por agente</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+      <div className="grid-metrics" style={{marginBottom:'24px'}}>
         {[
-          { label: 'Permisos activos', value: agentPermissions.flatMap(a => a.permissions).filter(p => p.granted).length, color: '#00FF88' },
-          { label: 'Permisos revocados', value: agentPermissions.flatMap(a => a.permissions).filter(p => !p.granted).length, color: '#FF3333' },
-          { label: 'Cambios hoy', value: auditLog.length, color: '#FFD700' },
-          { label: 'Agentes restringidos', value: agentPermissions.filter(a => a.status !== 'ACTIVE').length, color: '#FF8800' },
-        ].map((stat, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: stat.color, fontFamily: 'monospace' }}>{stat.value}</div>
-            <div style={{ fontSize: '12px', color: '#4A5568', marginTop: '4px' }}>{stat.label}</div>
+          {label:'AGENTES TOTALES',    value: agents.length,                                                    color:'var(--green-neon)'},
+          {label:'ACTIVOS',            value: agents.filter(a=>a.status==='NORMAL').length,                     color:'var(--green-neon)'},
+          {label:'SUSPICIOUS',         value: agents.filter(a=>a.status==='SUSPICIOUS').length,                 color:'var(--yellow-warn)'},
+          {label:'BLOQUEADOS',         value: agents.filter(a=>a.status==='BLOCKED').length,                    color:'var(--red-alert)'},
+        ].map((m,i) => (
+          <div key={i} className="metric-card">
+            <div style={{fontSize:'10px',fontWeight:700,color:'var(--text-muted)',letterSpacing:'1px',marginBottom:'10px'}}>{m.label}</div>
+            <div className="metric-value" style={{color:m.color,marginBottom:'6px'}}>{m.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        {(['matrix', 'audit'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: activeTab === tab ? '#00FF88' : 'rgba(255,255,255,0.05)', color: activeTab === tab ? '#050A05' : '#4A5568' }}>
-            {tab === 'matrix' ? 'Permission Matrix' : 'Audit Log'}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'matrix' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {agentPermissions.map(a => (
-              <div key={a.id} onClick={() => setSelected(a.id)} style={{ background: selected === a.id ? 'rgba(0,255,136,0.05)' : 'rgba(255,255,255,0.02)', border: `1px solid ${selected === a.id ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '12px', padding: '14px 16px', cursor: 'pointer', transition: 'all 0.2s' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700 }}>{a.name}</span>
-                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: `${statusColor[a.status]}15`, color: statusColor[a.status] }}>{a.status}</span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#4A5568', marginTop: '4px' }}>{a.model}</div>
-                <div style={{ fontSize: '11px', color: '#4A5568', marginTop: '2px' }}>{a.permissions.filter(p => p.granted).length} activos · {a.permissions.filter(p => !p.granted).length} revocados</div>
+      <div style={{display:'grid',gridTemplateColumns:'240px 1fr',gap:'24px'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+          {agents.map(a => (
+            <div key={a.name} onClick={() => setSelected(a.name)} style={{background:selected===a.name?'rgba(0,255,136,0.05)':'rgba(0,255,136,0.02)',border:1px solid ,borderRadius:'10px',padding:'14px 16px',cursor:'pointer',transition:'all 0.15s'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'13px',fontWeight:700,color:'var(--text-primary)'}}>{a.name}</span>
+                <span style={{fontSize:'9px',padding:'2px 6px',borderRadius:'4px',background:${statusColor[a.status]??'#00FF88'}15,color:statusColor[a.status]??'#00FF88'}}>{a.status}</span>
               </div>
-            ))}
-          </div>
+              <div style={{fontSize:'11px',color:'var(--text-muted)',marginTop:'4px'}}>{a.total_events} eventos · {a.anomalies} anomalias</div>
+            </div>
+          ))}
+        </div>
 
-          {agent && (
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px' }}>
-              <div style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '2px', marginBottom: '20px' }}>PERMISOS — {agent.name}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {agent.permissions.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: p.granted ? 'rgba(0,255,136,0.03)' : 'rgba(255,51,51,0.03)', border: `1px solid ${p.granted ? 'rgba(0,255,136,0.1)' : 'rgba(255,51,51,0.1)'}`, borderRadius: '10px', padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.granted ? '#00FF88' : '#FF3333' }} />
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600 }}>{p.name}</div>
-                        <div style={{ fontSize: '11px', color: '#4A5568', marginTop: '2px' }}>{p.resource}</div>
-                      </div>
+        {agent ? (
+          <div className="card-base" style={{padding:'24px'}}>
+            <div style={{fontSize:'11px',color:'var(--green-neon)',letterSpacing:'2px',marginBottom:'20px',fontFamily:'Syne,sans-serif',fontWeight:700}}>HERRAMIENTAS PERMITIDAS — {agent.name}</div>
+            {agent.allowed_tools?.length > 0 ? (
+              <div style={{display:'flex',flexDirection:'column',gap:'8px',marginBottom:'24px'}}>
+                {agent.allowed_tools.map((tool: string, i: number) => (
+                  <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(0,255,136,0.03)',border:'1px solid rgba(0,255,136,0.1)',borderRadius:'8px',padding:'12px 16px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                      <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#00FF88'}}/>
+                      <span style={{fontSize:'13px',fontWeight:600,color:'var(--text-primary)'}}>{tool.replace(/_/g,' ')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: `${levelColor[p.level]}15`, color: levelColor[p.level] }}>{p.level}</span>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '11px', color: '#4A5568' }}>{p.lastUsed}</div>
-                        <div style={{ fontSize: '11px', color: '#4A5568' }}>{p.uses} usos</div>
-                      </div>
-                      <span style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', fontWeight: 600, background: p.granted ? 'rgba(0,255,136,0.1)' : 'rgba(255,51,51,0.1)', color: p.granted ? '#00FF88' : '#FF3333' }}>{p.granted ? 'GRANTED' : 'REVOKED'}</span>
-                    </div>
+                    <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'4px',background:'rgba(0,255,136,0.1)',color:'#00FF88'}}>GRANTED</span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            ) : (
+              <div style={{textAlign:'center',padding:'20px',color:'var(--text-muted)',fontSize:'13px'}}>No hay herramientas configuradas</div>
+            )}
 
-      {activeTab === 'audit' && (
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px' }}>
-          <div style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '2px', marginBottom: '20px' }}>AUDIT LOG — HISTORIAL DE CAMBIOS</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {auditLog.map((log, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '12px 16px' }}>
-                <span style={{ fontSize: '12px', color: '#4A5568', fontFamily: 'monospace', flexShrink: 0 }}>{log.time}</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#E2E8F0', flexShrink: 0 }}>{log.agent}</span>
-                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: `${actionColor[log.action]}15`, color: actionColor[log.action], flexShrink: 0 }}>{log.action}</span>
-                <span style={{ fontSize: '12px', color: '#A855F7', fontFamily: 'monospace', flexShrink: 0 }}>{log.permission}</span>
-                <span style={{ fontSize: '11px', color: '#4A5568', flex: 1 }}>{log.reason}</span>
-                <span style={{ fontSize: '11px', color: '#4A5568', flexShrink: 0 }}>by {log.by}</span>
-              </div>
-            ))}
+            <div style={{fontSize:'11px',color:'var(--green-neon)',letterSpacing:'2px',marginBottom:'12px',fontFamily:'Syne,sans-serif',fontWeight:700}}>CAPACIDADES</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginBottom:'24px'}}>
+              {agent.capabilities?.map((cap: string, i: number) => (
+                <span key={i} style={{fontSize:'11px',padding:'4px 10px',borderRadius:'6px',background:'rgba(0,170,255,0.1)',color:'#00AAFF',border:'1px solid rgba(0,170,255,0.2)'}}>{cap}</span>
+              ))}
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+              {[
+                {label:'Status',       valor: agent.status,        color: statusColor[agent.status]??'#00FF88'},
+                {label:'Total Events', valor: agent.total_events,  color:'#00AAFF'},
+                {label:'Anomalias',    valor: agent.anomalies,     color: agent.anomalies>0?'#FF8800':'#00FF88'},
+                {label:'Avg Risk',     valor: Math.round(agent.avg_risk), color: agent.avg_risk>=70?'#FF3333':agent.avg_risk>=40?'#FF8800':'#00FF88'},
+              ].map((item,i) => (
+                <div key={i} style={{background:'rgba(0,255,136,0.02)',border:'1px solid rgba(0,255,136,0.08)',borderRadius:'8px',padding:'12px'}}>
+                  <div style={{fontSize:'10px',color:'var(--text-muted)',marginBottom:'4px'}}>{item.label}</div>
+                  <div style={{fontSize:'16px',fontWeight:800,color:item.color,fontFamily:'Syne,sans-serif'}}>{item.valor}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="card-base" style={{padding:'24px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div style={{fontSize:'13px',color:'var(--text-muted)'}}>Selecciona un agente</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
