@@ -67,12 +67,33 @@ export default function Forensics() {
   useEffect(() => {
     async function cargar() {
       try {
-        const data = await api.getCorrelations();
-        if (data?.cases?.length) { setCases(data.cases); setIsLive(true); setActiveCase(data.cases[0].id); }
+        const data = await api.getIncidents();
+        if (Array.isArray(data) && data.length) {
+          const mapped = data.slice(0, 10).map((inc: any) => ({
+            id: inc.id,
+            title: (inc.threat_types?.[0] || 'UNKNOWN').replace(/_/g, ' '),
+            severity: inc.severity?.toUpperCase() || 'MEDIUM',
+            agent: inc.agent || 'unknown',
+            user: inc.user || 'unknown',
+            session: inc.event_id?.slice(0, 8) || '--',
+            time: inc.created_at ? new Date(inc.created_at).toLocaleTimeString() : '--',
+            status: inc.policy_action === 'BLOCK' ? 'BLOCKED' : 'INVESTIGATING',
+            riskScore: inc.risk_score || 0,
+            chainSteps: 0, promptsAnalyzed: 0, techniques: inc.threat_types?.length || 0,
+            injectionScore: 0, roleManip: 0, toolAbuse: 0, dataExposure: 0,
+            tags: inc.threat_types || [],
+            description: `Incidente detectado en agente ${inc.agent}. Acción: ${inc.policy_action}.`,
+            similar: [], chain: [], prompts: [], timeline: [], patterns: [],
+          }));
+          setCases(mapped);
+          setIsLive(true);
+          setActiveCase(mapped[0].id);
+          setDatasetCount(data.length);
+        }
       } catch(e) {}
     }
     cargar();
-    const t = setInterval(() => setDatasetCount(p => p + Math.floor(Math.random() * 2)), 6000);
+    const t = setInterval(cargar, 15000);
     return () => clearInterval(t);
   }, []);
 
