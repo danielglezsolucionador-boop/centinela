@@ -24,13 +24,31 @@ export default function ThreatIntelligence() {
   useEffect(() => {
     async function cargar() {
       try {
-        const data = await api.getThreatMemory();
-        if (data?.threats?.length) { setThreats(data.threats); setIsLive(true); }
-        else if (Array.isArray(data) && data.length) { setThreats(data); setIsLive(true); }
+        const data = await api.getIncidents();
+        if (Array.isArray(data) && data.length) {
+          const mapped = data.map((inc: any) => ({
+            id: inc.id,
+            name: (inc.threat_types?.[0] || 'UNKNOWN').replace(/_/g, ' '),
+            type: inc.threat_types?.[0] || 'UNKNOWN',
+            severity: inc.severity?.toUpperCase() || 'MEDIUM',
+            origin: 'GLOBAL',
+            confidence: Math.round((inc.risk_score || 0)),
+            detected: 1,
+            blocked: inc.policy_action === 'BLOCK' ? 1 : 0,
+            lastSeen: inc.created_at ? new Date(inc.created_at).toLocaleTimeString() : '--',
+            status: inc.status === 'OPEN' ? 'ACTIVE' : 'MITIGATED',
+            description: `Incidente detectado en agente ${inc.agent}. Acción: ${inc.policy_action}.`,
+            payload: '',
+            targets: [inc.agent || 'unknown'],
+          }));
+          setThreats(mapped);
+          setIsLive(true);
+          setDbSize(data.length);
+        }
       } catch(e) {}
     }
     cargar();
-    const interval = setInterval(() => setDbSize(prev => prev + Math.floor(Math.random() * 2)), 5000);
+    const interval = setInterval(cargar, 15000);
     return () => clearInterval(interval);
   }, []);
 
