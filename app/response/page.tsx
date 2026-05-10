@@ -2,12 +2,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
-const PLAYBOOKS = [
-  { id: 'PB001', name: 'Prompt Injection Response', trigger: 'Injection score > 85', actions: ['Block agent', 'Revoke permissions', 'Alert admin', 'Log forensics'], status: 'ACTIVE', executions: 14 },
-  { id: 'PB002', name: 'Data Leakage Containment', trigger: 'PII detected in output', actions: ['Block response', 'Sanitize output', 'Notify DPO', 'Create incident'], status: 'ACTIVE', executions: 7 },
-  { id: 'PB003', name: 'Agent Drift Isolation', trigger: 'Behavioral drift > 70%', actions: ['Isolate agent', 'Suspend workflows', 'Full audit log', 'Human review'], status: 'ACTIVE', executions: 3 },
-  { id: 'PB004', name: 'Jailbreak Auto-Block', trigger: 'Jailbreak confidence > 90%', actions: ['Immediate block', 'Reset context', 'Flag user', 'Update threat DB'], status: 'ACTIVE', executions: 22 },
-];
+const PLAYBOOKS: any[] = [];
 
 const severityColor: Record<string, string> = { CRITICAL: '#FF3333', HIGH: '#FF8800', MEDIUM: '#FFD700', LOW: '#00FF88' };
 const statusColor: Record<string, string> = { EXECUTED: '#00FF88', ACTIVE: '#00AAFF', PENDING: '#FFD700', FAILED: '#FF3333' };
