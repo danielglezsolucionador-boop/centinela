@@ -1,16 +1,8 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
-const FALLBACK_ACTIONS = [
-  { id: 'R001', agent: 'PLUMA', type: 'AUTO_BLOCK', severity: 'CRITICAL', trigger: 'Prompt injection detectado', status: 'EXECUTED', time: '21:44:12', duration: '0.3s', details: 'Agente bloqueado. Workflow detenido. Permisos revocados.' },
-  { id: 'R002', agent: 'Laboratorio', type: 'ISOLATE', severity: 'HIGH', trigger: 'Tool call anómalo x3', status: 'EXECUTED', time: '21:41:05', duration: '0.8s', details: 'Agente aislado. Acceso a APIs suspendido temporalmente.' },
-  { id: 'R003', agent: 'Buscador', type: 'RATE_LIMIT', severity: 'MEDIUM', trigger: 'Volumen inusual de requests', status: 'ACTIVE', time: '21:38:44', duration: 'ongoing', details: 'Rate limiting aplicado. Monitoreo intensivo activado.' },
-  { id: 'R004', agent: 'MCF', type: 'ALERT', severity: 'HIGH', trigger: 'Acceso a datos financieros sensibles', status: 'PENDING', time: '21:35:21', duration: '-', details: 'Alerta enviada. Esperando confirmación manual.' },
-  { id: 'R005', agent: 'Cerebro', type: 'PERMISSION_REVOKE', severity: 'CRITICAL', trigger: 'Escalación de privilegios detectada', status: 'EXECUTED', time: '21:30:09', duration: '0.1s', details: 'Permisos revocados. Acceso root eliminado.' },
-];
-
-const FALLBACK_PLAYBOOKS = [
+const PLAYBOOKS = [
   { id: 'PB001', name: 'Prompt Injection Response', trigger: 'Injection score > 85', actions: ['Block agent', 'Revoke permissions', 'Alert admin', 'Log forensics'], status: 'ACTIVE', executions: 14 },
   { id: 'PB002', name: 'Data Leakage Containment', trigger: 'PII detected in output', actions: ['Block response', 'Sanitize output', 'Notify DPO', 'Create incident'], status: 'ACTIVE', executions: 7 },
   { id: 'PB003', name: 'Agent Drift Isolation', trigger: 'Behavioral drift > 70%', actions: ['Isolate agent', 'Suspend workflows', 'Full audit log', 'Human review'], status: 'ACTIVE', executions: 3 },
@@ -19,142 +11,166 @@ const FALLBACK_PLAYBOOKS = [
 
 const severityColor: Record<string, string> = { CRITICAL: '#FF3333', HIGH: '#FF8800', MEDIUM: '#FFD700', LOW: '#00FF88' };
 const statusColor: Record<string, string> = { EXECUTED: '#00FF88', ACTIVE: '#00AAFF', PENDING: '#FFD700', FAILED: '#FF3333' };
-const typeIcon: Record<string, string> = { AUTO_BLOCK: '🚫', ISOLATE: '🔒', RATE_LIMIT: '⏱️', ALERT: '🚨', PERMISSION_REVOKE: '❌' };
+const typeIcon: Record<string, string> = { AUTO_BLOCK: 'X', ISOLATE: 'ISO', RATE_LIMIT: 'RL', ALERT: '!', PERMISSION_REVOKE: 'REV' };
 
-export default function ResponseEngine() {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'actions' | 'playbooks'>('actions');
-  const [actions, setActions] = useState<any[]>(FALLBACK_ACTIONS);
-  const [playbooks, setPlaybooks] = useState<any[]>(FALLBACK_PLAYBOOKS);
-  const [liveCount, setLiveCount] = useState(1247);
-  const [isLive, setIsLive] = useState(false);
+function mapIncidentToAction(inc: any, idx: number) {
+  const types = inc.threat_types || [];
+  let type = 'ALERT';
+  if (types.includes('JAILBREAK') || types.includes('PROMPT_INJECTION')) type = 'AUTO_BLOCK';
+  else if (types.includes('DATA_EXFIL') || types.includes('PROMPT_LEAK')) type = 'ISOLATE';
+  else if (types.includes('ROLE_MANIPULATION')) type = 'PERMISSION_REVOKE';
+
+  const d = new Date(inc.created_at);
+  const time = d.toTimeString().slice(0, 8);
+
+  return {
+    id: inc.id || `R${String(idx + 1).padStart(3, '0')}`,
+    agent: inc.agent || 'unknown',
+    type,
+    severity: inc.severity || 'MEDIUM',
+    trigger: types.length > 0 ? types.join(', ') : 'Amenaza detectada',
+    status: inc.policy_action === 'BLOCK' ? 'EXECUTED' : inc.status === 'OPEN' ? 'PENDING' : 'ACTIVE',
+    time,
+    duration: inc.policy_action === 'BLOCK' ? '0.3s' : 'ongoing',
+    details: `Agente: ${inc.agent || 'unknown'}. Riesgo: ${inc.risk_score ?? 0}. Accion: ${inc.policy_action || 'MONITOR'}.`,
+  };
+}
+
+export default function ResponsePage() {
+  const [actions, setActions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<any>(null);
+  const [tab, setTab] = useState<'actions' | 'playbooks'>('actions');
 
   useEffect(() => {
-    async function cargar() {
+    async function load() {
       try {
-        const data = await api.getIncidents();
-        if (data?.incidents?.length) { setActions(data.incidents); setIsLive(true); }
-      } catch(e) {}
+        const token = localStorage.getItem('centinela_token');
+        if (!token) {
+          const res = await fetch('https://centinela-backend-kzwk.onrender.com/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'daniel', password: 'centinela24' }),
+          });
+          const data = await res.json();
+          if (data.access_token) localStorage.setItem('centinela_token', data.access_token);
+        }
+        const incidents = await api.getIncidents();
+        if (incidents && incidents.length > 0) {
+          setActions(incidents.map(mapIncidentToAction));
+        } else {
+          setActions([]);
+        }
+      } catch {
+        setActions([]);
+      } finally {
+        setLoading(false);
+      }
     }
-    cargar();
-    const interval = setInterval(() => setLiveCount(prev => prev + Math.floor(Math.random() * 3)), 4000);
-    return () => clearInterval(interval);
+    load();
   }, []);
 
-  const selectedAction = actions.find((a: any) => a.id === selected);
+  const stats = {
+    total: actions.length,
+    executed: actions.filter(a => a.status === 'EXECUTED').length,
+    pending: actions.filter(a => a.status === 'PENDING').length,
+    critical: actions.filter(a => a.severity === 'CRITICAL').length,
+  };
 
   return (
-    <div style={{ background: '#050A05', minHeight: '100vh', color: 'white', fontFamily: 'Plus Jakarta Sans, sans-serif', padding: '32px' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 12px #00FF88' }} />
-          <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>
-            RESPONSE ENGINE — ACTIVO {isLive && '· BACKEND LIVE'}
-          </span>
-        </div>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(135deg, #00FF88, #00AAFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
-          Response Engine
-        </h1>
-        <p style={{ color: '#4A5568', fontSize: '14px', marginTop: '4px' }}>Detección → Respuesta automática en tiempo real</p>
+    <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#fff', fontFamily: 'monospace', padding: '32px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ color: '#00FF88', fontSize: 28, margin: 0 }}>RESPONSE CENTER</h1>
+        <p style={{ color: '#666', margin: '4px 0 0' }}>Acciones automaticas e incidentes reales</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Respuestas automáticas', value: liveCount.toLocaleString(), color: '#00FF88' },
-          { label: 'Tiempo promedio respuesta', value: '0.4s', color: '#00FF88' },
-          { label: 'Bloqueos exitosos', value: '98.7%', color: '#00FF88' },
-          { label: 'Falsos positivos', value: '1.3%', color: '#00FF88' },
-        ].map((m, i) => (
-          <div key={i} style={{ background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '12px', padding: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: m.color, fontFamily: 'monospace' }}>{m.value}</div>
-            <div style={{ fontSize: '12px', color: '#4A5568', marginTop: '4px' }}>{m.label}</div>
+          { label: 'TOTAL ACCIONES', value: stats.total, color: '#00AAFF' },
+          { label: 'EJECUTADAS', value: stats.executed, color: '#00FF88' },
+          { label: 'PENDIENTES', value: stats.pending, color: '#FFD700' },
+          { label: 'CRITICAS', value: stats.critical, color: '#FF3333' },
+        ].map(s => (
+          <div key={s.label} style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: 16 }}>
+            <div style={{ color: '#666', fontSize: 11, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ color: s.color, fontSize: 28, fontWeight: 700 }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        {(['actions', 'playbooks'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: activeTab === tab ? '#00FF88' : 'rgba(255,255,255,0.05)', color: activeTab === tab ? '#050A05' : '#4A5568' }}>
-            {tab === 'actions' ? '⚡ Acciones de Respuesta' : '📋 Playbooks'}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setTab('actions')} style={{ background: tab === 'actions' ? '#00FF88' : '#111', color: tab === 'actions' ? '#000' : '#fff', border: '1px solid #333', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontFamily: 'monospace' }}>
+          ACCIONES ({actions.length})
+        </button>
+        <button onClick={() => setTab('playbooks')} style={{ background: tab === 'playbooks' ? '#00FF88' : '#111', color: tab === 'playbooks' ? '#000' : '#fff', border: '1px solid #333', padding: '8px 20px', borderRadius: 6, cursor: 'pointer', fontFamily: 'monospace' }}>
+          PLAYBOOKS ({PLAYBOOKS.length})
+        </button>
       </div>
 
-      {activeTab === 'actions' && (
-        <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: '24px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {actions.map((action: any) => (
-              <div key={action.id} onClick={() => setSelected(selected === action.id ? null : action.id)} style={{ background: selected === action.id ? 'rgba(0,255,136,0.05)' : 'rgba(255,255,255,0.02)', border: `1px solid ${selected === action.id ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '12px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '20px' }}>{typeIcon[action.type] || '⚡'}</span>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700 }}>{action.agent}</div>
-                      <div style={{ fontSize: '11px', color: '#4A5568', marginTop: '2px' }}>{action.trigger}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, background: `${severityColor[action.severity]}20`, color: severityColor[action.severity] }}>{action.severity}</span>
-                    <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, background: `${statusColor[action.status]}20`, color: statusColor[action.status] }}>{action.status}</span>
-                    <span style={{ fontSize: '11px', color: '#4A5568', fontFamily: 'monospace' }}>{action.time}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {selectedAction && (
-            <div style={{ background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '16px', padding: '24px', height: 'fit-content' }}>
-              <div style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '2px', marginBottom: '16px' }}>INCIDENT DETAIL — {selectedAction.id}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  { label: 'Agente', value: selectedAction.agent },
-                  { label: 'Tipo', value: selectedAction.type },
-                  { label: 'Severidad', value: selectedAction.severity },
-                  { label: 'Estado', value: selectedAction.status },
-                  { label: 'Hora', value: selectedAction.time },
-                  { label: 'Duración', value: selectedAction.duration },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '10px' }}>
-                    <span style={{ fontSize: '12px', color: '#4A5568' }}>{item.label}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{item.value}</span>
-                  </div>
-                ))}
-                <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#00FF88', fontFamily: 'monospace', lineHeight: 1.6 }}>{selectedAction.details}</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: 'rgba(255,51,51,0.1)', color: '#FF3333', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Revertir</button>
-                  <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: 'rgba(0,255,136,0.1)', color: '#00FF88', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Ver forense</button>
-                </div>
-              </div>
+      {tab === 'actions' && (
+        <div>
+          {loading && <div style={{ color: '#666', padding: 32, textAlign: 'center' }}>Cargando acciones...</div>}
+          {!loading && actions.length === 0 && (
+            <div style={{ color: '#666', padding: 32, textAlign: 'center', border: '1px solid #222', borderRadius: 8 }}>
+              Sin acciones registradas. Envia prompts via SDK PLUMA para generar incidentes.
             </div>
           )}
+          {!loading && actions.map(action => (
+            <div key={action.id} onClick={() => setSelected(selected?.id === action.id ? null : action)}
+              style={{ background: '#111', border: `1px solid ${selected?.id === action.id ? '#00FF88' : '#222'}`, borderRadius: 8, padding: 16, marginBottom: 8, cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <span style={{ color: '#666', fontSize: 12 }}>{action.id}</span>
+                  <span style={{ color: severityColor[action.severity] || '#fff', fontWeight: 700 }}>{action.severity}</span>
+                  <span style={{ color: '#00AAFF' }}>{action.agent}</span>
+                  <span style={{ color: '#fff' }}>{action.type}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <span style={{ color: statusColor[action.status] || '#fff', fontSize: 12 }}>{action.status}</span>
+                  <span style={{ color: '#666', fontSize: 12 }}>{action.time}</span>
+                </div>
+              </div>
+              {selected?.id === action.id && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #222' }}>
+                  <div style={{ color: '#aaa', fontSize: 13, marginBottom: 4 }}>Trigger: {action.trigger}</div>
+                  <div style={{ color: '#ccc', fontSize: 13 }}>{action.details}</div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      {activeTab === 'playbooks' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-          {playbooks.map((pb: any) => (
-            <div key={pb.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+      {tab === 'playbooks' && (
+        <div>
+          {PLAYBOOKS.map(pb => (
+            <div key={pb.id} style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: 16, marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{pb.name}</div>
-                  <div style={{ fontSize: '11px', color: '#4A5568' }}>Trigger: {pb.trigger}</div>
+                  <span style={{ color: '#00FF88', fontWeight: 700, marginRight: 12 }}>{pb.name}</span>
+                  <span style={{ color: '#666', fontSize: 12 }}>Trigger: {pb.trigger}</span>
                 </div>
-                <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: 700, background: 'rgba(0,255,136,0.1)', color: '#00FF88' }}>{pb.status}</span>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <span style={{ color: '#00FF88', fontSize: 12 }}>{pb.status}</span>
+                  <span style={{ color: '#666', fontSize: 12 }}>x{pb.executions}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
-                {pb.actions.map((action: string, i: number) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94A3B8' }}>
-                    <span style={{ color: '#00FF88', fontSize: '10px' }}>→</span>{action}
-                  </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {pb.actions.map((a: string) => (
+                  <span key={a} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#aaa' }}>{a}</span>
                 ))}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '12px' }}>
-                <span style={{ fontSize: '11px', color: '#4A5568' }}>{pb.executions} ejecuciones</span>
-                <button style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid rgba(0,255,136,0.2)', background: 'transparent', color: '#00FF88', fontSize: '11px', cursor: 'pointer' }}>Editar</button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {selected && tab === 'actions' && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#111', border: '1px solid #00FF88', borderRadius: 8, padding: 16, minWidth: 280 }}>
+          <div style={{ color: '#00FF88', fontWeight: 700, marginBottom: 8 }}>ACCION SELECCIONADA</div>
+          <div style={{ color: '#aaa', fontSize: 13 }}>{selected.id} — {selected.agent}</div>
+          <div style={{ color: '#fff', fontSize: 13, marginTop: 4 }}>{selected.details}</div>
+          <button onClick={() => setSelected(null)} style={{ marginTop: 12, background: 'transparent', border: '1px solid #666', color: '#666', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}>CERRAR</button>
         </div>
       )}
     </div>
