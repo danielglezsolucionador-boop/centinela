@@ -42,10 +42,24 @@ export default function Runtime() {
       try {
         const stats = await api.getDbStats();
         setDetectionStats(stats);
+        const incidents = await api.getIncidents();
+        if (Array.isArray(incidents) && incidents.length) {
+          const mapped = incidents.slice(0, 20).map((inc: any) => ({
+            id: inc.id?.slice(0, 8).toUpperCase() || 'INC-????',
+            tiempo: inc.created_at ? new Date(inc.created_at).toLocaleTimeString() : '--',
+            sistema: inc.agent?.toUpperCase() || 'UNKNOWN',
+            modelo: 'claude-sonnet',
+            prompt: `Incidente ${inc.threat_types?.[0] || 'UNKNOWN'} detectado en ${inc.agent}`,
+            score: Math.round(inc.risk_score || 0),
+            decision: inc.policy_action === 'BLOCK' ? 'BLOQUEADO' : 'PERMITIDO',
+            tipo: inc.threat_types?.[0] || 'NORMAL',
+          }));
+          setPrompts(mapped);
+        }
       } catch (e) {}
     };
     fetchStats();
-    const interval = setInterval(fetchStats, 10000);
+    const interval = setInterval(fetchStats, 15000);
     return () => clearInterval(interval);
   }, []);
 
