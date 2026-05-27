@@ -18,6 +18,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [dateStr, setDateStr] = useState('');
   const [stats, setStats] = useState<any>(null);
   const [dataState, setDataState] = useState<DataState>('loading');
+  const [frontendRuntimeProvenance, setFrontendRuntimeProvenance] = useState<RuntimeProvenance | null>(null);
   const [backendProvenance, setBackendProvenance] = useState<RuntimeProvenance | null>(null);
   useEffect(() => {
     const fmt = () => new Date().toLocaleString('es-PE', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -45,6 +46,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     let active = true;
     const fetchProvenance = async () => {
       try {
+        const frontend = await fetch('/api/provenance', { cache: 'no-store' });
+        if (frontend.ok && active) setFrontendRuntimeProvenance(await frontend.json());
+      } catch {}
+      try {
         const data = await api.provenance();
         if (active) setBackendProvenance(data);
       } catch {
@@ -59,6 +64,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     fetchProvenance();
     return () => { active = false; };
   }, []);
+  const frontendCommit = shortCommit(frontendRuntimeProvenance?.current_commit ?? frontendProvenance.commit);
+  const backendCommit = shortCommit(backendProvenance?.current_commit);
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#050A05' }}>
       <aside style={{ width: '210px', minWidth: '210px', background: '#070D07', borderRight: '1px solid #1A2A1A', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -100,7 +107,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#FF3333', boxShadow: '0 0 4px #FF3333', flexShrink: 0 }} />
             <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '9px', color: '#2A5A2A', letterSpacing: '1px' }}>{isVerifiedData(dataState) ? `${stats?.total_incidents ?? 0} INCIDENTES` : dataState === 'auth_required' ? 'AUTH REQUIRED' : 'DATA UNAVAILABLE'}</span>
           </div>
-          <div style={{ marginTop: '8px', fontSize: '8px', color: '#1A3A1A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>FE {frontendProvenance.shortCommit} / BE {shortCommit(backendProvenance?.current_commit)}</div>
+          <div style={{ marginTop: '8px', fontSize: '8px', color: '#1A3A1A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>FE {frontendCommit} / BE {backendCommit}</div>
         </div>
       </aside>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
@@ -112,7 +119,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             <DataProvenanceBadge state={dataState} />
             <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
-              FE {frontendProvenance.shortCommit} · BE {shortCommit(backendProvenance?.current_commit)}
+              FE {frontendCommit} · BE {backendCommit}
             </span>
             <span style={{ fontSize: '11px', color: '#2A4A2A', fontFamily: 'monospace' }}>{dateStr}</span>
           </div>
