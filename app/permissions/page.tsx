@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api, ensureToken } from '@/lib/api';
 
 const levelColor: Record<string, string> = {
   READ: '#00AAFF', WRITE: '#FFD700', EXECUTE: '#FF8800', API: '#A855F7', ADMIN: '#FF3333',
@@ -22,16 +22,7 @@ export default function Permissions() {
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('centinela_token');
-        if (!token) {
-          const res = await fetch('https://centinela-backend-kzwk.onrender.com/api/v1/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'daniel', password: 'centinela24' }),
-          });
-          const data = await res.json();
-          if (data.access_token) localStorage.setItem('centinela_token', data.access_token);
-        }
+        await ensureToken();
         const incidents = await api.getIncidents();
         if (incidents && incidents.length > 0) {
           const log = incidents.map((inc: any) => ({

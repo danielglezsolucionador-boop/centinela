@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api, ensureToken } from '@/lib/api';
 
 export default function Forensics() {
   const [cases, setCases] = useState([]);
@@ -10,16 +10,7 @@ export default function Forensics() {
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('centinela_token');
-        if (!token) {
-          const res = await fetch('https://centinela-backend-kzwk.onrender.com/api/v1/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'daniel', password: 'centinela24' }),
-          });
-          const data = await res.json();
-          if (data.access_token) localStorage.setItem('centinela_token', data.access_token);
-        }
+        await ensureToken();
         const incidents = await api.getIncidents();
         if (Array.isArray(incidents) && incidents.length > 0) {
           const mapped = incidents.map((inc) => ({

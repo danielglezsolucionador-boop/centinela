@@ -1,14 +1,27 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://centinela-backend-kzwk.onrender.com';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://centinela-backend-kzwk.onrender.com';
+const DEMO_USERNAME = process.env.NEXT_PUBLIC_CENTINELA_DEMO_USERNAME;
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_CENTINELA_DEMO_PASSWORD;
 
 // ── Token management ──────────────────────────────────────────────────
 export const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('centinela_token') : null;
 export const ensureToken = async () => {
-  if (getToken()) return;
+  const existing = getToken();
+  if (existing) return existing;
+  if (!DEMO_USERNAME || !DEMO_PASSWORD) return null;
   try {
-    const res = await fetch(`${API_URL}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'daniel', password: 'centinela24' }) });
+    const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: DEMO_USERNAME, password: DEMO_PASSWORD }),
+    });
+    if (!res.ok) return null;
     const data = await res.json();
-    if (data.access_token) setToken(data.access_token);
+    if (data.access_token) {
+      setToken(data.access_token);
+      return data.access_token;
+    }
   } catch {}
+  return null;
 };
 export const setToken = (token: string) => localStorage.setItem('centinela_token', token);
 export const removeToken = () => localStorage.removeItem('centinela_token');

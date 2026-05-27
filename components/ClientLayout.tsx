@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { API_URL, ensureToken } from '@/lib/api';
 const NAV = [
   { section: 'COMANDO', items: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Runtime', href: '/runtime' }] },
   { section: 'PROTECCION', items: [{ label: 'Firewall', href: '/firewall' }, { label: 'Response', href: '/response' }, { label: 'Agentes', href: '/agentes' }] },
@@ -23,13 +24,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        let token = localStorage.getItem('centinela_token');
-        if (!token) {
-          const res = await fetch('https://centinela-backend-kzwk.onrender.com/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'daniel', password: 'centinela24' }) });
-          const data = await res.json();
-          if (data.access_token) { localStorage.setItem('centinela_token', data.access_token); token = data.access_token; }
-        }
-        const res = await fetch('https://centinela-backend-kzwk.onrender.com/api/v1/stats/db', { headers: { Authorization: `Bearer ${token}` } });
+        await ensureToken();
+        const token = localStorage.getItem('centinela_token');
+        const res = await fetch(`${API_URL}/api/v1/stats/db`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error('Stats unavailable');
         const data = await res.json();
         setStats(data);
       } catch {}
