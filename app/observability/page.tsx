@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { DataProvenanceBadge, DataState } from '@/components/OperationalState';
 
 const FALLBACK_MODELS = [
   { model: 'claude-sonnet-4', requests: 2847, tokens: 1284750, latency: 1.2, cost: 4.23, errors: 3, anomalies: 1, status: 'HEALTHY' },
@@ -35,13 +36,20 @@ export default function Observability() {
   const [loading, setLoading] = useState(true);
   const [totalTokens, setTotalTokens] = useState(1518850);
   const [totalRequests, setTotalRequests] = useState(3739);
+  const [dataState, setDataState] = useState<DataState>('mock');
 
   useEffect(() => {
     async function cargar() {
       try {
         const data = await api.getObservabilityMetrics();
-        if (data && !data.detail) setMetrics(data);
-      } catch(e) {}
+        if (data && !data.detail) {
+          setMetrics(data);
+          setDataState('verified');
+        }
+      } catch(e) {
+        setMetrics(null);
+        setDataState('mock');
+      }
       finally { setLoading(false); }
     }
     cargar();
@@ -66,7 +74,7 @@ export default function Observability() {
             MODEL OBSERVABILITY
           </h1>
           <span className="badge badge-green">ACTIVO</span>
-          {isLive && <span className="badge badge-blue">BACKEND LIVE</span>}
+          <DataProvenanceBadge state={isLive ? 'verified' : dataState} />
         </div>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
           Latencia · Tokens · Costos · Anomalías · Tracing completo
@@ -75,9 +83,9 @@ export default function Observability() {
 
       <div className="grid-metrics" style={{ marginBottom: '24px' }}>
         {[
-          { label: 'TOTAL REQUESTS', value: totalRequests.toLocaleString(), color: 'var(--green-neon)', sub: 'Acumulado hoy' },
-          { label: 'TOKENS CONSUMIDOS', value: (totalTokens / 1000).toFixed(1) + 'K', color: 'var(--blue-info)', sub: 'Live' },
-          { label: 'COSTO TOTAL HOY', value: `$${totalCost.toFixed(2)}`, color: 'var(--yellow-warn)', sub: 'USD estimado' },
+          { label: 'TOTAL REQUESTS', value: totalRequests.toLocaleString(), color: 'var(--green-neon)', sub: isLive ? 'Verified backend' : 'MOCK/SIMULATED' },
+          { label: 'TOKENS CONSUMIDOS', value: (totalTokens / 1000).toFixed(1) + 'K', color: 'var(--blue-info)', sub: isLive ? 'Verified backend' : 'SIMULATED' },
+          { label: 'COSTO TOTAL HOY', value: `$${totalCost.toFixed(2)}`, color: 'var(--yellow-warn)', sub: isLive ? 'Verified backend' : 'MOCK/SIMULATED' },
           { label: 'ANOMALÍAS', value: String(anomalies.length), color: anomalies.length > 0 ? 'var(--red-alert)' : 'var(--green-neon)', sub: 'Detectadas hoy' },
         ].map((m, i) => (
           <div key={i} className="metric-card">

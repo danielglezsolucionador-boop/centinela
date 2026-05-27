@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { DataProvenanceBadge, DataState } from '@/components/OperationalState';
 
 const FALLBACK_INCIDENTS = [
   {
@@ -115,6 +116,7 @@ export default function Incidentes() {
   const [active, setActive] = useState(FALLBACK_INCIDENTS[0].id);
   const [tab, setTab] = useState<'overview' | 'timeline' | 'remediation' | 'metrics'>('overview');
   const [isLive, setIsLive] = useState(false);
+  const [dataState, setDataState] = useState<DataState>('mock');
 
   useEffect(() => {
     async function cargar() {
@@ -124,8 +126,12 @@ export default function Incidentes() {
           setIncidents(data);
           setActive(data[0].id);
           setIsLive(true);
+          setDataState('verified');
         }
-      } catch (e) {}
+      } catch (e) {
+        setIsLive(false);
+        setDataState('mock');
+      }
     }
     cargar();
   }, []);
@@ -149,6 +155,7 @@ export default function Incidentes() {
           <span style={{ fontSize: '11px', color: '#FFD700', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>{investigatingCount} INVESTIGATING</span>
           <span style={{ fontSize: '11px', color: '#00FF88', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>{resolvedCount} RESOLVED</span>
           {isLive && <span style={{ fontSize: '10px', color: '#00AAFF', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>· BACKEND</span>}
+          <DataProvenanceBadge state={isLive ? 'verified' : dataState} />
           <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#FF3333', boxShadow: '0 0 8px #FF3333', animation: 'pulse 2s infinite' }} />
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, OperationalNotice, protectedValue } from '@/components/OperationalState';
 
 const rc = (r) => r >= 8 ? '#FF3333' : r >= 6 ? '#FF8800' : r >= 4 ? '#FFD700' : '#00FF88';
 const sc = (s) => s >= 80 ? '#00FF88' : s >= 65 ? '#FFD700' : s >= 50 ? '#FF8800' : '#FF3333';
@@ -12,6 +13,7 @@ export default function Reporte() {
   const [risk, setRisk] = useState(null);
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState('overview');
+  const [dataState, setDataState] = useState<DataState>('loading');
 
   useEffect(() => {
     async function load() {
@@ -25,15 +27,22 @@ export default function Reporte() {
         setStats(dbStats);
         setIncidents(Array.isArray(incData) ? incData : []);
         setRisk(riskData);
-      } catch(e) {} finally { setLoading(false); }
+        setDataState('verified');
+      } catch(error) {
+        setStats(null);
+        setIncidents([]);
+        setRisk(null);
+        setDataState(classifyDataState(error));
+      } finally { setLoading(false); }
     }
     load();
   }, []);
 
-  const totalEvents = stats?.total_events ?? 0;
-  const threatEvents = stats?.threat_events ?? 0;
-  const blockedEvents = stats?.blocked_events ?? 0;
-  const totalIncidents = stats?.total_incidents ?? 0;
+  const verified = isVerifiedData(dataState);
+  const totalEvents = verified ? stats?.total_events ?? 0 : 0;
+  const threatEvents = verified ? stats?.threat_events ?? 0 : 0;
+  const blockedEvents = verified ? stats?.blocked_events ?? 0 : 0;
+  const totalIncidents = verified ? stats?.total_incidents ?? 0 : 0;
   const secScore = totalEvents > 0 ? Math.max(0, Math.round(100 - (threatEvents/totalEvents)*100)) : null;
   const agentCount = risk?.agents ? Object.keys(risk.agents).length : 0;
 
@@ -56,7 +65,7 @@ export default function Reporte() {
       <div style={{ marginBottom:'24px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'6px' }}>
           <h1 style={{ fontSize:'22px', fontWeight:800, color:'#E8F5E8', margin:0 }}>SECURITY REPORT</h1>
-          <span style={{ fontSize:'10px', padding:'2px 8px', borderRadius:'4px', background:'rgba(0,255,136,0.1)', color:'#00FF88', fontWeight:700 }}>DATOS REALES</span>
+          <DataProvenanceBadge state={dataState} />
         </div>
         <p style={{ fontSize:'13px', color:'#4A5568', margin:0 }}>Reporte generado desde PostgreSQL en tiempo real</p>
       </div>
@@ -70,8 +79,9 @@ export default function Reporte() {
       </div>
 
       {loading && <div style={{ color:'#4A5568', textAlign:'center', padding:48 }}>Cargando datos reales...</div>}
+      {!loading && !verified && <OperationalNotice state={dataState} subject="security report" />}
 
-      {!loading && section === 'overview' && (
+      {!loading && verified && section === 'overview' && (
         <div>
           {totalEvents === 0 ? (
             <div style={{ color:'#4A5568', textAlign:'center', padding:48, border:'1px solid #1a1a1a', borderRadius:8 }}>
@@ -120,7 +130,7 @@ export default function Reporte() {
         </div>
       )}
 
-      {!loading && section === 'risks' && (
+      {!loading && verified && section === 'risks' && (
         <div>
           {agentRisks.length === 0 ? (
             <div style={{ color:'#4A5568', textAlign:'center', padding:48, border:'1px solid #1a1a1a', borderRadius:8 }}>Sin datos de riesgo por agente disponibles.</div>
@@ -142,7 +152,7 @@ export default function Reporte() {
         </div>
       )}
 
-      {!loading && section === 'threats' && (
+      {!loading && verified && section === 'threats' && (
         <div>
           {topThreats.length === 0 ? (
             <div style={{ color:'#4A5568', textAlign:'center', padding:48, border:'1px solid #1a1a1a', borderRadius:8 }}>Sin amenazas registradas aun.</div>

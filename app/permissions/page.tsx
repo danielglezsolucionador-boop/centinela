@@ -1,6 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, OperationalNotice, protectedValue } from '@/components/OperationalState';
 
 const levelColor: Record<string, string> = {
   READ: '#00AAFF', WRITE: '#FFD700', EXECUTE: '#FF8800', API: '#A855F7', ADMIN: '#FF3333',
@@ -18,6 +19,7 @@ export default function Permissions() {
   const [agentMap, setAgentMap] = useState<Record<string, any>>({});
   const [selected, setSelected] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [dataState, setDataState] = useState<DataState>('loading');
 
   useEffect(() => {
     async function load() {
@@ -51,8 +53,11 @@ export default function Permissions() {
           const first = Object.keys(map)[0];
           if (first) setSelected(first);
         }
+        setDataState('verified');
       } catch (e) {
         setAuditLog([]);
+        setAgentMap({});
+        setDataState(classifyDataState(e));
       } finally {
         setLoading(false);
       }
@@ -62,6 +67,7 @@ export default function Permissions() {
 
   const agents = Object.values(agentMap);
   const agent = agentMap[selected];
+  const verified = isVerifiedData(dataState);
 
   const stats = {
     active: auditLog.filter(l => l.action === 'ALLOW').length,
@@ -76,6 +82,7 @@ export default function Permissions() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 12px #00FF88' }} />
           <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>PERMISSION SYSTEM — CONTROL TOTAL</span>
+          <DataProvenanceBadge state={dataState} />
         </div>
         <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(135deg, #00FF88, #00AAFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
           Agent Permissions
@@ -85,10 +92,10 @@ export default function Permissions() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
         {[
-          { label: 'Acciones ALLOW', value: stats.active, color: '#00FF88' },
-          { label: 'Acciones BLOCK', value: stats.revoked, color: '#FF3333' },
-          { label: 'Eventos totales', value: stats.changes, color: '#FFD700' },
-          { label: 'Agentes restringidos', value: stats.restricted, color: '#FF8800' },
+          { label: 'Acciones ALLOW', value: protectedValue(dataState, stats.active), color: '#00FF88' },
+          { label: 'Acciones BLOCK', value: protectedValue(dataState, stats.revoked), color: '#FF3333' },
+          { label: 'Eventos totales', value: protectedValue(dataState, stats.changes), color: '#FFD700' },
+          { label: 'Agentes restringidos', value: protectedValue(dataState, stats.restricted), color: '#FF8800' },
         ].map((stat, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '28px', fontWeight: 800, color: stat.color, fontFamily: 'monospace' }}>{stat.value}</div>
@@ -107,7 +114,9 @@ export default function Permissions() {
 
       {loading && <div style={{ color: '#666', textAlign: 'center', padding: 32 }}>Cargando datos reales...</div>}
 
-      {!loading && activeTab === 'matrix' && (
+      {!loading && !verified && <OperationalNotice state={dataState} subject="permissions matrix and audit log" />}
+
+      {!loading && verified && activeTab === 'matrix' && (
         <div>
           {agents.length === 0 ? (
             <div style={{ color: '#666', textAlign: 'center', padding: 32, border: '1px solid #222', borderRadius: 8 }}>
@@ -150,7 +159,7 @@ export default function Permissions() {
         </div>
       )}
 
-      {!loading && activeTab === 'audit' && (
+      {!loading && verified && activeTab === 'audit' && (
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px' }}>
           <div style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '2px', marginBottom: '20px' }}>AUDIT LOG — HISTORIAL REAL</div>
           {auditLog.length === 0 ? (

@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, OperationalNotice } from '@/components/OperationalState';
 
 export default function Forensics() {
   const [cases, setCases] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dataState, setDataState] = useState<DataState>('loading');
 
   useEffect(() => {
     async function load() {
@@ -31,33 +33,41 @@ export default function Forensics() {
           setCases(mapped);
           setSelected(mapped[0] ?? null);
         }
-      } catch(e) { setCases([]); } finally { setLoading(false); }
+        setDataState('verified');
+      } catch(error) {
+        setCases([]);
+        setSelected(null);
+        setDataState(classifyDataState(error));
+      } finally { setLoading(false); }
     }
     load();
   }, []);
 
   const severityColor = { CRITICAL: '#FF3333', HIGH: '#FF8800', MEDIUM: '#FFD700', LOW: '#00FF88' };
   const statusColor = { BLOCKED: '#FF3333', MONITORED: '#00AAFF', INVESTIGATING: '#FFD700' };
+  const verified = isVerifiedData(dataState);
 
   return (
     <div className="animate-fadeIn">
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
           <h1 className="font-syne" style={{ fontSize: '22px', fontWeight: 800, color: '#E8F5E8' }}>FORENSICS</h1>
-          <span className="badge badge-green">DATOS REALES</span>
+          <DataProvenanceBadge state={dataState} />
         </div>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Analisis forense de incidentes reales desde PostgreSQL</p>
       </div>
 
       {loading && <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 48 }}>Cargando incidentes...</div>}
 
-      {!loading && cases.length === 0 && (
+      {!loading && !verified && <OperationalNotice state={dataState} subject="forensics incidents" />}
+
+      {!loading && verified && cases.length === 0 && (
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 48, border: '1px solid #222', borderRadius: 8 }}>
           Sin incidentes forenses. Envia prompts via SDK PLUMA para generar datos reales.
         </div>
       )}
 
-      {!loading && cases.length > 0 && (
+      {!loading && verified && cases.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {cases.map(c => (

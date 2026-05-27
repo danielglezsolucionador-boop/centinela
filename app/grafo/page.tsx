@@ -1,6 +1,7 @@
 ﻿'use client';
 import { useState, useEffect, useRef } from 'react';
 import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, OperationalNotice } from '@/components/OperationalState';
 
 const NODE_POSITIONS: Record<string, {x:number,y:number}> = {
   PLUMA:        {x:300,y:430},
@@ -26,6 +27,7 @@ export default function Grafo() {
   const [tick, setTick] = useState(0);
   const [loading, setLoading] = useState(true);
   const [waking, setWaking] = useState(false);
+  const [dataState, setDataState] = useState<DataState>('loading');
 
   useEffect(() => {
     const t = setInterval(() => setTick(p=>p+1), 1500);
@@ -40,8 +42,14 @@ export default function Grafo() {
         const [ag, co] = await Promise.all([api.getAgentMap(), api.getCorrelations()]);
         setAgents(Array.isArray(ag) ? ag : []);
         setCorrelations(Array.isArray(co) ? co : []);
+        setDataState('verified');
         setWaking(false);
-      } catch { setWaking(true); }
+      } catch (error) {
+        setAgents([]);
+        setCorrelations([]);
+        setDataState(classifyDataState(error));
+        setWaking(false);
+      }
       finally { clearTimeout(timeout); setLoading(false); }
     };
     fetch();
@@ -60,6 +68,7 @@ export default function Grafo() {
   }));
 
   const sel = nodes.find(n => n.id === selectedNode);
+  const verified = isVerifiedData(dataState);
 
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:'16px',background:'#050A05'}}>
@@ -77,12 +86,13 @@ export default function Grafo() {
         </div>
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:'12px'}}>
           <div style={{width:'7px',height:'7px',borderRadius:'50%',background:'#00FF88',boxShadow:'0 0 8px #00FF88'}}/>
-          <span style={{fontFamily:'Syne, sans-serif',fontSize:'11px',color:'#7A9A80',letterSpacing:'1px'}}>BACKEND LIVE</span>
+          <DataProvenanceBadge state={dataState} />
         </div>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 280px',overflow:'hidden',height:'calc(100vh - 48px)'}}>
         <div style={{position:'relative',overflow:'hidden',background:'#050A05'}}>
+          {!verified && <div style={{position:'absolute',zIndex:2,left:24,right:24,top:24}}><OperationalNotice state={dataState} subject="security graph intelligence" /></div>}
           <svg width="100%" height="100%" viewBox="0 0 780 560" style={{display:'block'}}>
             <defs>
               <filter id="glow-red"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>

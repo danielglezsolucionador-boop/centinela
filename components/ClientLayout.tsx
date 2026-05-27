@@ -2,7 +2,9 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { API_URL, ensureToken } from '@/lib/api';
+import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, protectedValue } from '@/components/OperationalState';
+import { frontendProvenance, RuntimeProvenance, shortCommit } from '@/lib/provenance';
 const NAV = [
   { section: 'COMANDO', items: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Runtime', href: '/runtime' }] },
   { section: 'PROTECCION', items: [{ label: 'Firewall', href: '/firewall' }, { label: 'Response', href: '/response' }, { label: 'Agentes', href: '/agentes' }] },
@@ -15,6 +17,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [dateStr, setDateStr] = useState('');
   const [stats, setStats] = useState<any>(null);
+  const [dataState, setDataState] = useState<DataState>('loading');
+  const [backendProvenance, setBackendProvenance] = useState<RuntimeProvenance | null>(null);
   useEffect(() => {
     const fmt = () => new Date().toLocaleString('es-PE', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     setDateStr(fmt());
@@ -25,18 +29,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const fetchStats = async () => {
       try {
         await ensureToken();
-        const token = localStorage.getItem('centinela_token');
-        const res = await fetch(`${API_URL}/api/v1/stats/db`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) throw new Error('Stats unavailable');
-        const data = await res.json();
+        const data = await api.getDbStats();
         setStats(data);
-      } catch {}
+        setDataState('verified');
+      } catch (error) {
+        setStats(null);
+        setDataState(classifyDataState(error));
+      }
     };
     fetchStats();
     const interval = setInterval(fetchStats, 15000);
     return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    let active = true;
+    const fetchProvenance = async () => {
+      try {
+        const data = await api.provenance();
+        if (active) setBackendProvenance(data);
+      } catch {
+        try {
+          const health = await api.health();
+          if (active) setBackendProvenance(health?.provenance ?? null);
+        } catch {
+          if (active) setBackendProvenance(null);
+        }
+      }
+    };
+    fetchProvenance();
+    return () => { active = false; };
   }, []);
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#050A05' }}>
@@ -77,9 +98,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#FF3333', boxShadow: '0 0 4px #FF3333', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '9px', color: '#2A5A2A', letterSpacing: '1px' }}>{stats ? `${stats.total_incidents} INCIDENTES` : 'CARGANDO...'}</span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '9px', color: '#2A5A2A', letterSpacing: '1px' }}>{isVerifiedData(dataState) ? `${stats?.total_incidents ?? 0} INCIDENTES` : dataState === 'auth_required' ? 'AUTH REQUIRED' : 'DATA UNAVAILABLE'}</span>
           </div>
-          <div style={{ marginTop: '8px', fontSize: '8px', color: '#1A3A1A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>v1.0.0 - Daniel Gonzalez</div>
+          <div style={{ marginTop: '8px', fontSize: '8px', color: '#1A3A1A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>FE {frontendProvenance.shortCommit} / BE {shortCommit(backendProvenance?.current_commit)}</div>
         </div>
       </aside>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
@@ -87,22 +108,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 8px #00FF88', animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: '11px', color: '#00FF88', fontFamily: 'Syne, sans-serif', fontWeight: 700, letterSpacing: '1px' }}>LIVE</span>
+              <span style={{ fontSize: '11px', color: '#00FF88', fontFamily: 'Syne, sans-serif', fontWeight: 700, letterSpacing: '1px' }}>LIVE RUNTIME</span>
             </div>
+            <DataProvenanceBadge state={dataState} />
+            <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
+              FE {frontendProvenance.shortCommit} · BE {shortCommit(backendProvenance?.current_commit)}
+            </span>
             <span style={{ fontSize: '11px', color: '#2A4A2A', fontFamily: 'monospace' }}>{dateStr}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>THREATS</span>
-              <span style={{ fontSize: '13px', color: '#FF3333', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{stats?.blocked_events ?? '-'}</span>
+              <span style={{ fontSize: '13px', color: '#FF3333', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.blocked_events ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>PROMPTS</span>
-              <span style={{ fontSize: '13px', color: '#00FF88', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{stats?.total_events ?? '-'}</span>
+              <span style={{ fontSize: '13px', color: '#00FF88', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.total_events ?? 0)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>INCIDENTES</span>
-              <span style={{ fontSize: '13px', color: '#FF8800', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{stats?.total_incidents ?? '-'}</span>
+              <span style={{ fontSize: '13px', color: '#FF8800', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.total_incidents ?? 0)}</span>
             </div>
           </div>
         </div>

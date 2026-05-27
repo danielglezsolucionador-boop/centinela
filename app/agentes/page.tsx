@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { DataProvenanceBadge, DataState } from '@/components/OperationalState';
 
 const FALLBACK_AGENTS = [
   { id: 'AGT001', name: 'PLUMA', type: 'Content Generator', status: 'MONITORED', risk: 78, toolCalls: 342, anomalies: 3, lastActive: '21:44:12', model: 'claude-sonnet-4', permissions: ['write:content', 'read:trends', 'publish:web'], workflows: 4, drift: 23 },
@@ -46,14 +47,18 @@ export default function AgentSecurity() {
   const [toolCallsData, setToolCallsData] = useState<any[]>(FALLBACK_TOOLCALLS);
   const [liveToolCalls, setLiveToolCalls] = useState(2699);
   const [isLive, setIsLive] = useState(false);
+  const [dataState, setDataState] = useState<DataState>('mock');
 
   useEffect(() => {
     async function cargar() {
       try {
         const data = await api.getAgentsMap();
-        if (data?.agents?.length) { setAgentsData(data.agents); setIsLive(true); }
+        if (data?.agents?.length) { setAgentsData(data.agents); setIsLive(true); setDataState('verified'); }
         if (data?.tool_calls?.length) setToolCallsData(data.tool_calls);
-      } catch(e) {}
+      } catch(e) {
+        setIsLive(false);
+        setDataState('mock');
+      }
     }
     cargar();
     const interval = setInterval(() => {
@@ -72,7 +77,7 @@ export default function AgentSecurity() {
             AGENT SECURITY
           </h1>
           <span className="badge badge-green">ACTIVO</span>
-          {isLive && <span className="badge badge-blue">BACKEND LIVE</span>}
+          <DataProvenanceBadge state={isLive ? 'verified' : dataState} />
         </div>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
           {agentsData.length} agentes monitoreados · Tool calls · Comportamiento en tiempo real
@@ -82,7 +87,7 @@ export default function AgentSecurity() {
       <div className="grid-metrics" style={{ marginBottom: '24px' }}>
         {[
           { label: 'AGENTES ACTIVOS', value: String(agentsData.filter((a: any) => a.status === 'ACTIVE').length), color: 'var(--green-neon)', sub: 'Sin anomalías' },
-          { label: 'TOOL CALLS TOTALES', value: liveToolCalls.toLocaleString(), color: 'var(--blue-info)', sub: 'Live' },
+          { label: 'TOOL CALLS TOTALES', value: liveToolCalls.toLocaleString(), color: 'var(--blue-info)', sub: isLive ? 'Verified backend' : 'SIMULATED' },
           { label: 'AGENTES BLOQUEADOS', value: String(agentsData.filter((a: any) => a.status === 'BLOCKED').length), color: 'var(--red-alert)', sub: 'Requieren revisión' },
           { label: 'ANOMALÍAS TOTALES', value: String(agentsData.reduce((sum: number, a: any) => sum + (a.anomalies || 0), 0)), color: 'var(--yellow-warn)', sub: 'Detectadas hoy' },
         ].map((m, i) => (

@@ -1,6 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 import { api, ensureToken } from '@/lib/api';
+import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, OperationalNotice, protectedValue } from '@/components/OperationalState';
 
 const PLAYBOOKS: any[] = [];
 
@@ -36,6 +37,7 @@ export default function ResponsePage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [tab, setTab] = useState<'actions' | 'playbooks'>('actions');
+  const [dataState, setDataState] = useState<DataState>('loading');
 
   useEffect(() => {
     async function load() {
@@ -47,8 +49,10 @@ export default function ResponsePage() {
         } else {
           setActions([]);
         }
-      } catch {
+        setDataState('verified');
+      } catch (error) {
         setActions([]);
+        setDataState(classifyDataState(error));
       } finally {
         setLoading(false);
       }
@@ -62,20 +66,22 @@ export default function ResponsePage() {
     pending: actions.filter(a => a.status === 'PENDING').length,
     critical: actions.filter(a => a.severity === 'CRITICAL').length,
   };
+  const verified = isVerifiedData(dataState);
 
   return (
     <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#fff', fontFamily: 'monospace', padding: '32px' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ color: '#00FF88', fontSize: 28, margin: 0 }}>RESPONSE CENTER</h1>
+        <div style={{ marginTop: 8 }}><DataProvenanceBadge state={dataState} /></div>
         <p style={{ color: '#666', margin: '4px 0 0' }}>Acciones automaticas e incidentes reales</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'TOTAL ACCIONES', value: stats.total, color: '#00AAFF' },
-          { label: 'EJECUTADAS', value: stats.executed, color: '#00FF88' },
-          { label: 'PENDIENTES', value: stats.pending, color: '#FFD700' },
-          { label: 'CRITICAS', value: stats.critical, color: '#FF3333' },
+          { label: 'TOTAL ACCIONES', value: protectedValue(dataState, stats.total), color: '#00AAFF' },
+          { label: 'EJECUTADAS', value: protectedValue(dataState, stats.executed), color: '#00FF88' },
+          { label: 'PENDIENTES', value: protectedValue(dataState, stats.pending), color: '#FFD700' },
+          { label: 'CRITICAS', value: protectedValue(dataState, stats.critical), color: '#FF3333' },
         ].map(s => (
           <div key={s.label} style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: 16 }}>
             <div style={{ color: '#666', fontSize: 11, marginBottom: 4 }}>{s.label}</div>
@@ -96,12 +102,13 @@ export default function ResponsePage() {
       {tab === 'actions' && (
         <div>
           {loading && <div style={{ color: '#666', padding: 32, textAlign: 'center' }}>Cargando acciones...</div>}
-          {!loading && actions.length === 0 && (
+          {!loading && !verified && <OperationalNotice state={dataState} subject="response actions" />}
+          {!loading && verified && actions.length === 0 && (
             <div style={{ color: '#666', padding: 32, textAlign: 'center', border: '1px solid #222', borderRadius: 8 }}>
               Sin acciones registradas. Envia prompts via SDK PLUMA para generar incidentes.
             </div>
           )}
-          {!loading && actions.map(action => (
+          {!loading && verified && actions.map(action => (
             <div key={action.id} onClick={() => setSelected(selected?.id === action.id ? null : action)}
               style={{ background: '#111', border: `1px solid ${selected?.id === action.id ? '#00FF88' : '#222'}`, borderRadius: 8, padding: 16, marginBottom: 8, cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

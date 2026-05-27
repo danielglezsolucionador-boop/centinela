@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { DataProvenanceBadge, DataState } from '@/components/OperationalState';
 
 const policies = [
   {
@@ -73,13 +74,17 @@ export default function PolicyEngine() {
   const [selected, setSelected] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'policies' | 'compliance'>('policies');
   const [isLive, setIsLive] = useState(false);
+  const [dataState, setDataState] = useState<DataState>('mock');
 
   useEffect(() => {
     async function cargar() {
       try {
         const data = await api.getPolicyStats();
-        if (data) setIsLive(true);
-      } catch (e) {}
+        if (data) { setIsLive(true); setDataState('verified'); }
+      } catch (e) {
+        setIsLive(false);
+        setDataState('mock');
+      }
     }
     cargar();
   }, []);
@@ -97,6 +102,7 @@ export default function PolicyEngine() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 12px #00FF88' }} />
           <span style={{ fontSize: '11px', color: '#00FF88', letterSpacing: '3px', fontWeight: 700 }}>POLICY ENGINE — {policies.filter(p => p.status === 'ACTIVE').length} POLITICAS ACTIVAS {isLive && '· BACKEND'}</span>
+          <DataProvenanceBadge state={isLive ? 'verified' : dataState} />
         </div>
         <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(135deg, #00FF88, #00AAFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
           AI Policy Engine
