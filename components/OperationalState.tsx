@@ -7,7 +7,13 @@ export type DataState =
   | 'live_runtime'
   | 'verified'
   | 'auth_required'
+  | 'auth_degraded'
   | 'data_unavailable'
+  | 'degraded_mode'
+  | 'partial_operation'
+  | 'limited_visibility'
+  | 'provenance_degraded'
+  | 'timeout'
   | 'mock'
   | 'simulated';
 
@@ -36,11 +42,47 @@ const META: Record<DataState, { label: string; color: string; bg: string; copy: 
     bg: 'rgba(255,184,0,0.1)',
     copy: 'Protected operational data requires a valid session.',
   },
+  auth_degraded: {
+    label: 'AUTH DEGRADED',
+    color: '#FFB800',
+    bg: 'rgba(255,184,0,0.1)',
+    copy: 'Authentication visibility is degraded; protected data may be incomplete.',
+  },
   data_unavailable: {
     label: 'DATA UNAVAILABLE',
     color: '#FF6B00',
     bg: 'rgba(255,107,0,0.1)',
     copy: 'Backend data could not be verified right now.',
+  },
+  degraded_mode: {
+    label: 'DEGRADED MODE',
+    color: '#FFB800',
+    bg: 'rgba(255,184,0,0.1)',
+    copy: 'Runtime is operating with degraded evidence or dependency visibility.',
+  },
+  partial_operation: {
+    label: 'PARTIAL OPERATION',
+    color: '#00AAFF',
+    bg: 'rgba(0,170,255,0.1)',
+    copy: 'Some operational surfaces loaded while others failed or degraded.',
+  },
+  limited_visibility: {
+    label: 'LIMITED VISIBILITY',
+    color: '#FFB800',
+    bg: 'rgba(255,184,0,0.1)',
+    copy: 'Centinela has limited evidence and must not claim normal operation.',
+  },
+  provenance_degraded: {
+    label: 'PROVENANCE DEGRADED',
+    color: '#FFB800',
+    bg: 'rgba(255,184,0,0.1)',
+    copy: 'Source or runtime provenance could not be fully verified.',
+  },
+  timeout: {
+    label: 'TIMEOUT',
+    color: '#FF6B00',
+    bg: 'rgba(255,107,0,0.1)',
+    copy: 'A runtime request timed out; visibility is degraded.',
   },
   mock: {
     label: 'MOCK/SIMULATED',
@@ -57,6 +99,9 @@ const META: Record<DataState, { label: string; color: string; bg: string; copy: 
 };
 
 export function classifyDataState(error: unknown): DataState {
+  if (typeof error === 'object' && error && 'name' in error && String((error as { name?: unknown }).name) === 'AbortError') {
+    return 'timeout';
+  }
   return isAuthError(error) ? 'auth_required' : 'data_unavailable';
 }
 

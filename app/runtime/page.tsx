@@ -26,7 +26,14 @@ export default function Runtime() {
   useEffect(() => {
     async function load() {
       try {
-        await ensureToken();
+        const token = await ensureToken();
+        if (!token) {
+          setPrompts([]);
+          setStats(null);
+          setDataState('auth_required');
+          setLoading(false);
+          return;
+        }
         const [dbStats, incidents] = await Promise.all([api.getDbStats(), api.getIncidents()]);
         setStats(dbStats);
         setPrompts(Array.isArray(incidents) ? incidents.slice(0, 50).map((inc: any) => ({

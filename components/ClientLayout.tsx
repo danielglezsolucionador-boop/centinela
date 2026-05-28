@@ -29,7 +29,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        await ensureToken();
+        const token = await ensureToken();
+        if (!token) {
+          setStats(null);
+          setDataState('auth_required');
+          return;
+        }
         const data = await api.getDbStats();
         setStats(data);
         setDataState('verified');
