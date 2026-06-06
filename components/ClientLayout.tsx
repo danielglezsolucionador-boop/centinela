@@ -1,151 +1,261 @@
-﻿'use client';
-import { usePathname } from 'next/navigation';
+'use client';
+
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { api, ensureToken } from '@/lib/api';
-import { classifyDataState, DataProvenanceBadge, DataState, isVerifiedData, protectedValue } from '@/components/OperationalState';
-import { frontendProvenance, RuntimeProvenance, shortCommit } from '@/lib/provenance';
+import { classifyDataState, DataState, isVerifiedData, protectedValue } from '@/components/OperationalState';
+
+type ChatMessage = {
+  role: 'centinela' | 'user';
+  text: string;
+};
+
+type RuntimeStats = {
+  total_events?: number;
+  total_incidents?: number;
+  blocked_events?: number;
+};
+
 const NAV = [
-  { section: 'COMANDO', items: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Runtime', href: '/runtime' }] },
-  { section: 'PROTECCION', items: [{ label: 'Firewall', href: '/firewall' }, { label: 'Response', href: '/response' }, { label: 'Agentes', href: '/agentes' }] },
-  { section: 'GOVERNANCE', items: [{ label: 'Permissions', href: '/permissions' }, { label: 'Policy', href: '/policy' }, { label: 'Datos', href: '/datos' }] },
-  { section: 'INTELIGENCIA', items: [{ label: 'Observability', href: '/observability' }, { label: 'Amenazas', href: '/amenazas' }, { label: 'Forensics', href: '/forensics' }, { label: 'Incidentes', href: '/incidentes' }] },
-  { section: 'ANALISIS', items: [{ label: 'Grafo', href: '/grafo' }, { label: 'Reporte', href: '/reporte' }] },
+  { label: 'Overview', href: '/' },
+  { label: 'Runtime', href: '/runtime' },
+  { label: 'Firewall IA', href: '/firewall' },
+  { label: 'Agentes', href: '/agentes' },
+  { label: 'Permisos', href: '/permissions' },
+  { label: 'Politicas', href: '/policy' },
+  { label: 'Observabilidad', href: '/observability' },
+  { label: 'Amenazas', href: '/amenazas' },
+  { label: 'Forensics', href: '/forensics' },
+  { label: 'Incidentes', href: '/incidentes' },
+  { label: 'Grafo', href: '/grafo' },
+  { label: 'Respuesta', href: '/response' },
+  { label: 'Reporte', href: '/reporte' },
 ];
-const ALERT_HREFS = new Set(['/runtime', '/amenazas', '/incidentes']);
+
+const MOBILE_NAV = [
+  { label: 'Inicio', href: '/' },
+  { label: 'Alertas', href: '/incidentes' },
+  { label: 'Agentes', href: '/agentes' },
+  { label: 'Reportes', href: '/reporte' },
+  { label: 'Perfil', href: '/login' },
+];
+
+function dataStateStatus(state: DataState) {
+  if (isVerifiedData(state)) return 'OPERATIONAL';
+  if (state === 'auth_required') return 'DEGRADED';
+  if (state === 'loading') return 'UNKNOWN';
+  return 'DEGRADED';
+}
+
+function pillClass(status: string) {
+  const value = String(status || '').toUpperCase();
+  if (['OPERATIONAL', 'READY', 'VERIFIED'].includes(value)) return 'status-pill good';
+  if (['BLOCKED', 'ERROR', 'FAILED'].includes(value)) return 'status-pill danger';
+  return 'status-pill warn';
+}
+
+function sentinelaLocalReply(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('permiso')) {
+    return 'Permisos en observacion: revisa capacidades de escritura, despliegue y acceso a datos antes de activar tareas reales.';
+  }
+  if (normalized.includes('reporte')) {
+    return 'Reporte ejecutivo: proteccion activa, riesgo global medio y una alerta prioritaria sobre agente local con permisos sensibles.';
+  }
+  if (normalized.includes('app') || normalized.includes('mirar')) {
+    return 'Mira primero FORJA, porque el agente local requiere control de permisos antes de ejecucion prolongada.';
+  }
+  return 'Estoy protegiendo aplicaciones, agentes IA, datos sensibles y permisos criticos con una cabina local preparada, sin conexion externa real.';
+}
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [dateStr, setDateStr] = useState('');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<RuntimeStats | null>(null);
   const [dataState, setDataState] = useState<DataState>('loading');
-  const [frontendRuntimeProvenance, setFrontendRuntimeProvenance] = useState<RuntimeProvenance | null>(null);
-  const [backendProvenance, setBackendProvenance] = useState<RuntimeProvenance | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'centinela',
+      text: 'CEO, estoy en guardia. Protejo aplicaciones, agentes, datos y permisos solo con evidencia verificable.',
+    },
+  ]);
+
   useEffect(() => {
-    const fmt = () => new Date().toLocaleString('es-PE', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    setDateStr(fmt());
-    const t = setInterval(() => setDateStr(fmt()), 60000);
-    return () => clearInterval(t);
-  }, []);
-  useEffect(() => {
+    let active = true;
     const fetchStats = async () => {
       try {
         const token = await ensureToken();
         if (!token) {
+          if (!active) return;
           setStats(null);
           setDataState('auth_required');
           return;
         }
         const data = await api.getDbStats();
+        if (!active) return;
         setStats(data);
         setDataState('verified');
       } catch (error) {
+        if (!active) return;
         setStats(null);
         setDataState(classifyDataState(error));
       }
     };
     fetchStats();
     const interval = setInterval(fetchStats, 15000);
-    return () => clearInterval(interval);
-  }, []);
-  useEffect(() => {
-    let active = true;
-    const fetchProvenance = async () => {
-      try {
-        const frontend = await fetch('/api/provenance', { cache: 'no-store' });
-        if (frontend.ok && active) setFrontendRuntimeProvenance(await frontend.json());
-      } catch {}
-      try {
-        const data = await api.provenance();
-        if (active) setBackendProvenance(data);
-      } catch {
-        try {
-          const health = await api.health();
-          if (active) setBackendProvenance(health?.provenance ?? null);
-        } catch {
-          if (active) setBackendProvenance(null);
-        }
-      }
+    return () => {
+      active = false;
+      clearInterval(interval);
     };
-    fetchProvenance();
-    return () => { active = false; };
   }, []);
-  const frontendCommit = shortCommit(frontendRuntimeProvenance?.current_commit ?? frontendProvenance.commit);
-  const backendCommit = shortCommit(backendProvenance?.current_commit);
+
+  const globalStatus = dataStateStatus(dataState);
+
+  const evidenceCopy = useMemo(() => {
+    if (isVerifiedData(dataState)) return 'Tengo evidencia autenticada del backend.';
+    if (dataState === 'auth_required') return 'Sesion requerida para ver datos.';
+    if (dataState === 'loading') return 'Estoy verificando el runtime.';
+    return 'No tengo evidencia suficiente para afirmar proteccion total.';
+  }, [dataState]);
+
+  function submitChat(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const message = chatInput.trim();
+    if (!message) return;
+    const reply = sentinelaLocalReply(message);
+    setMessages((current) => [
+      ...current,
+      { role: 'user', text: message },
+      { role: 'centinela', text: reply },
+    ]);
+    setChatInput('');
+  }
+
+  function ask(prompt: string) {
+    setChatInput(prompt);
+  }
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#050A05' }}>
-      <aside style={{ width: '210px', minWidth: '210px', background: '#070D07', borderRight: '1px solid #1A2A1A', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <div style={{ height: '52px', borderBottom: '1px solid #1A2A1A', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '10px', flexShrink: 0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L21 6.5V12C21 16.75 17 20.85 12 22C7 20.85 3 16.75 3 12V6.5Z" stroke="#00FF88" strokeWidth="1.5" fill="rgba(0,255,136,0.1)" style={{ filter: 'drop-shadow(0 0 4px #00FF88)' }} />
-            <path d="M12 7L16 9.2V12C16 14.2 14.2 16.1 12 16.8C9.8 16.1 8 14.2 8 12V9.2Z" fill="rgba(0,255,136,0.2)" stroke="#00FF88" strokeWidth="0.8" />
-          </svg>
+    <div className="human-cabin-shell centinela-theme">
+      <aside className="human-left-panel">
+        <div className="human-brand">
+          <div className="human-avatar shield-avatar" aria-hidden="true" />
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '13px', color: '#E8F5E8', letterSpacing: '3px' }}>CENTINELA</div>
-            <div style={{ fontSize: '8px', color: '#2A4A2A', letterSpacing: '1.5px', fontFamily: 'Syne, sans-serif' }}>AI SECURITY</div>
+            <span>SENTINELA</span>
+            <strong>Doctor preventivo de ciberseguridad</strong>
           </div>
         </div>
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
-          {NAV.map(group => (
-            <div key={group.section} style={{ marginBottom: '4px' }}>
-              <div style={{ fontSize: '8px', fontWeight: 700, color: '#1A3A1A', letterSpacing: '2px', padding: '10px 10px 4px', fontFamily: 'Syne, sans-serif' }}>{group.section}</div>
-              {group.items.map(item => {
-                const active = pathname === item.href;
-                const alert = ALERT_HREFS.has(item.href);
-                return (
-                  <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', margin: '1px 0', borderRadius: '3px', borderLeft: active ? '2px solid #00FF88' : '2px solid transparent', background: active ? 'rgba(0,255,136,0.08)' : 'transparent', cursor: 'pointer', transition: 'all .15s' }}>
-                      <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', color: active ? '#00FF88' : '#3A6A3A', transition: 'color .15s' }}>{item.label}</span>
-                      {alert && !active && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#FF3333', boxShadow: '0 0 5px #FF3333', animation: 'pulse 2s infinite', flexShrink: 0 }} />}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+
+        <section className="human-status-card">
+          <div>
+            <span>Estado global</span>
+            <strong>{globalStatus}</strong>
+            <p>{evidenceCopy}</p>
+          </div>
+          <span className={pillClass(globalStatus)}>{globalStatus}</span>
+        </section>
+
+        <section className="human-kpis">
+          <article>
+            <span>Eventos</span>
+            <strong>{protectedValue(dataState, stats?.total_events ?? 0, 'NO DATA')}</strong>
+            <small>{isVerifiedData(dataState) ? 'Evidencia autenticada.' : 'Esperando datos reales.'}</small>
+          </article>
+          <article>
+            <span>Incidentes</span>
+            <strong>{protectedValue(dataState, stats?.total_incidents ?? 0, 'NO DATA')}</strong>
+            <small>{isVerifiedData(dataState) ? 'Registro verificado.' : 'Sin visibilidad autenticada.'}</small>
+          </article>
+          <article>
+            <span>Bloqueos</span>
+            <strong>{protectedValue(dataState, stats?.blocked_events ?? 0, 'NO DATA')}</strong>
+            <small>{isVerifiedData(dataState) ? 'Defensas registradas.' : 'No existe evidencia verificable.'}</small>
+          </article>
+          <article>
+            <span>Chat IA</span>
+            <strong>LOCAL PREPARED</strong>
+            <small>Sin conexion externa real.</small>
+          </article>
+        </section>
+
+        <nav className="human-nav" aria-label="Navegacion CENTINELA">
+          {NAV.map((item) => (
+            <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
+              {item.label}
+            </Link>
           ))}
         </nav>
-        <div style={{ padding: '12px 14px', borderTop: '1px solid #1A2A1A', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 6px #00FF88', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '9px', color: '#2A5A2A', letterSpacing: '1px' }}>SISTEMA OPERATIVO</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#FF3333', boxShadow: '0 0 4px #FF3333', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '9px', color: '#2A5A2A', letterSpacing: '1px' }}>{isVerifiedData(dataState) ? `${stats?.total_incidents ?? 0} INCIDENTES` : dataState === 'auth_required' ? 'AUTH REQUIRED' : 'DATA UNAVAILABLE'}</span>
-          </div>
-          <div style={{ marginTop: '8px', fontSize: '8px', color: '#1A3A1A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>FE {frontendCommit} / BE {backendCommit}</div>
-        </div>
       </aside>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        <div style={{ height: '52px', background: '#070D07', borderBottom: '1px solid #1A2A1A', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 8px #00FF88', animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: '11px', color: '#00FF88', fontFamily: 'Syne, sans-serif', fontWeight: 700, letterSpacing: '1px' }}>LIVE RUNTIME</span>
+
+      <main className="human-center-panel">
+        {children}
+      </main>
+
+      <aside className="human-right-panel">
+        <section className="human-chat-card">
+          <header className="human-chat-heading">
+            <div className="human-avatar shield-avatar" aria-hidden="true" />
+            <div>
+              <span>SENTINELA habla</span>
+              <strong>Guardia ejecutivo en vigilancia</strong>
             </div>
-            <DataProvenanceBadge state={dataState} />
-            <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
-              FE {frontendCommit} · BE {backendCommit}
-            </span>
-            <span style={{ fontSize: '11px', color: '#2A4A2A', fontFamily: 'monospace' }}>{dateStr}</span>
+            <small>LOCAL PREPARED</small>
+          </header>
+
+          <div className="human-director-feed">
+            <article>
+              <div>
+                <span>Vigilancia</span>
+                <strong>{isVerifiedData(dataState) ? 'Tengo evidencia autenticada.' : 'Visibilidad limitada.'}</strong>
+              </div>
+              <span className={pillClass(globalStatus)}>{globalStatus}</span>
+            </article>
+            <article>
+              <div>
+                <span>Bloqueo</span>
+                <strong>{isVerifiedData(dataState) ? 'Incidentes verificados solamente.' : 'Sin amenazas declaradas.'}</strong>
+              </div>
+              <span className={pillClass(dataState === 'auth_required' ? 'DEGRADED' : globalStatus)}>{dataState === 'auth_required' ? 'AUTH' : globalStatus}</span>
+            </article>
+            <article>
+              <div>
+                <span>Siguiente paso</span>
+                <strong>{isVerifiedData(dataState) ? 'Mantendre vigilancia.' : 'Necesito autenticacion.'}</strong>
+              </div>
+              <span className="status-pill warn">NEXT</span>
+            </article>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>THREATS</span>
-              <span style={{ fontSize: '13px', color: '#FF3333', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.blocked_events ?? 0)}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>PROMPTS</span>
-              <span style={{ fontSize: '13px', color: '#00FF88', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.total_events ?? 0)}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', color: '#2A4A2A', fontFamily: 'Syne, sans-serif', letterSpacing: '1px' }}>INCIDENTES</span>
-              <span style={{ fontSize: '13px', color: '#FF8800', fontWeight: 800, fontFamily: 'Syne, sans-serif' }}>{protectedValue(dataState, stats?.total_incidents ?? 0)}</span>
-            </div>
+
+          <div className="human-prompt-grid">
+            <button type="button" onClick={() => ask('Que estas protegiendo?')}>Que proteges?</button>
+            <button type="button" onClick={() => ask('Que app debo mirar primero?')}>Que miro?</button>
+            <button type="button" onClick={() => ask('Que permisos debo revisar?')}>Permisos</button>
+            <button type="button" onClick={() => ask('Dame reporte ejecutivo')}>Reporte</button>
           </div>
-        </div>
-        <main style={{ flex: 1, overflowY: 'auto' }}>{children}</main>
-      </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} } * { box-sizing: border-box; } nav::-webkit-scrollbar { width: 3px; } nav::-webkit-scrollbar-track { background: transparent; } nav::-webkit-scrollbar-thumb { background: #1A3A1A; border-radius: 2px; }`}</style>
+
+          <div className="human-chat-log" aria-live="polite">
+            {messages.slice(-6).map((message, index) => (
+              <div className={`human-message ${message.role}`} key={`${message.role}-${index}`}>
+                {message.text}
+              </div>
+            ))}
+          </div>
+
+          <form className="human-chat-form" onSubmit={submitChat}>
+            <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Preguntar a SENTINELA" />
+            <button type="submit" disabled={!chatInput.trim()}>Enviar</button>
+          </form>
+        </section>
+      </aside>
+
+      <nav className="human-mobile-nav" aria-label="Navegacion mobile SENTINELA">
+        {MOBILE_NAV.map((item) => (
+          <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
