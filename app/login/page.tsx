@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,102 +16,79 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      await auth.login(username, password);
-      router.push('/dashboard');
-    } catch (e) {
-      setError('Credenciales inválidas');
+      await auth.login(email, password);
+      router.push('/human-cabin');
+    } catch {
+      setError('No se pudo iniciar sesión con esas credenciales.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-primary)',
-    }}>
-      <div className="card-base" style={{ padding: '40px', width: '100%', maxWidth: '400px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 className="font-syne" style={{ fontSize: '24px', fontWeight: 800, color: 'var(--green-neon)', letterSpacing: '2px' }}>
-            CENTINELA
-          </h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-            AI Runtime Security Platform
+    <main className="sentinela-login-page">
+      <section className="sentinela-login-panel">
+        <div className="sentinela-login-copy">
+          <span className="sentinela-eyebrow">Cabina premium de ciberseguridad defensiva</span>
+          <h1>Acceso cliente SENTINELA</h1>
+          <p>
+            Entra a tu cabina para revisar riesgo, evidencia, decisiones humanas
+            y reportes ejecutivos. La demo visual no entrega protección real.
           </p>
+          <div className="sentinela-login-plans">
+            <span>Empresa S/199/mes</span>
+            <span>Premium S/499/mes</span>
+            <span>Corporativo desde S/999/mes</span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="sentinela-login-card">
           <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '1px' }}>USUARIO</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              style={{
-                width: '100%',
-                marginTop: '6px',
-                padding: '10px 12px',
-                background: 'rgba(0,255,136,0.05)',
-                border: '1px solid rgba(0,255,136,0.2)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <span className="sentinela-eyebrow">Iniciar sesión</span>
+            <h2>Cuenta protegida</h2>
           </div>
 
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '1px' }}>CONTRASEÑA</label>
+          <label>
+            Correo
             <input
+              autoComplete="email"
+              inputMode="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleLogin()}
+              placeholder="correo@empresa.com"
+            />
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              autoComplete="current-password"
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              style={{
-                width: '100%',
-                marginTop: '6px',
-                padding: '10px 12px',
-                background: 'rgba(0,255,136,0.05)',
-                border: '1px solid rgba(0,255,136,0.2)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              onChange={(event) => setPassword(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleLogin()}
+              placeholder="Contraseña"
             />
-          </div>
+          </label>
 
-          {error && (
-            <p style={{ fontSize: '12px', color: 'var(--red-alert)', textAlign: 'center' }}>{error}</p>
-          )}
+          {error && <p className="sentinela-login-error">{error}</p>}
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            style={{
-              padding: '12px',
-              background: 'var(--green-neon)',
-              color: '#000',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 700,
-              letterSpacing: '1px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? 'AUTENTICANDO...' : 'ACCEDER'}
+          <button className="sentinela-login-primary" onClick={handleLogin} disabled={loading}>
+            {loading ? 'Validando sesión...' : 'Iniciar sesión'}
           </button>
+
+          <button className="sentinela-login-secondary" type="button" disabled>
+            Continuar con Google — próximamente
+          </button>
+
+          <div className="sentinela-login-footer">
+            <Link href="/human-cabin">Ver demo visual</Link>
+            <button type="button" disabled>Crear cuenta — activación comercial</button>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

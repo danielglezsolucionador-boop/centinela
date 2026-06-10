@@ -321,6 +321,21 @@ html, body {
   max-width: 100%;
 }
 
+.human-cabin-shell:has(.sentinela-human-premium) {
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+  display: none;
+}
+
+.human-brand,
+.human-brand > div,
+.human-status-card,
+.human-kpis article {
+  min-width: 0;
+}
+
 .human-left-panel,
 .human-center-panel,
 .human-right-panel,
@@ -418,8 +433,9 @@ html, body {
   display: block;
   margin-top: 4px;
   color: #e8f5e8;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .human-status-card {
@@ -491,7 +507,7 @@ html, body {
 .human-kpis strong {
   display: block;
   margin-top: 8px;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.04;
   word-break: break-word;
 }
@@ -843,12 +859,683 @@ html, body {
   }
 }
 
+/* Final route-specific overrides for SENTINELA Human Cabin */
+.human-cabin-shell:has(.sentinela-human-premium) {
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+  display: none;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-mobile-nav {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-kpis strong {
+  font-size: 20px;
+}
+
+@media (max-width: 940px) {
+  .human-cabin-shell:has(.sentinela-human-premium) {
+    display: flex;
+    flex-direction: column;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header h1 {
+    max-width: 100%;
+    font-size: 24px;
+    line-height: 1.06;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header p {
+    max-width: 100%;
+    font-size: 14px;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 940px) {
+  .human-mobile-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .human-mobile-nav a {
+    min-width: 0;
+    padding: 0 4px;
+  }
+
+  .human-center-panel:has(.sentinela-human-premium) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-status-card {
+    display: none;
+  }
+
+  .sentinela-human-premium,
+  .sentinela-human-premium * {
+    max-width: 100%;
+  }
+
+  .sentinela-human-premium h1,
+  .sentinela-human-premium h2,
+  .sentinela-human-premium h3,
+  .sentinela-human-premium p,
+  .sentinela-human-premium strong,
+  .sentinela-human-premium span,
+  .sentinela-human-premium button {
+    overflow-wrap: anywhere;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* SENTINELA Premium Client Login */
+.sentinela-login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(170, 111, 62, 0.18), transparent 36%),
+    linear-gradient(180deg, #0b0d0d 0%, #050707 100%);
+}
+
+.sentinela-login-panel {
+  width: min(1020px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.sentinela-login-copy,
+.sentinela-login-card {
+  border: 1px solid rgba(170, 111, 62, 0.22);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    rgba(13, 15, 15, 0.92);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+}
+
+.sentinela-login-copy {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: clamp(28px, 5vw, 54px);
+}
+
+.sentinela-login-copy h1,
+.sentinela-login-card h2 {
+  color: #f4efe8;
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.sentinela-login-copy h1 {
+  font-size: clamp(2.6rem, 6vw, 5.4rem);
+}
+
+.sentinela-login-copy p,
+.sentinela-login-card label,
+.sentinela-login-footer,
+.sentinela-login-copy .sentinela-login-plans span {
+  color: #b8b0a6;
+  line-height: 1.55;
+}
+
+.sentinela-login-plans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sentinela-login-plans span {
+  border: 1px solid rgba(170, 111, 62, 0.24);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(170, 111, 62, 0.08);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sentinela-login-card {
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+}
+
+.sentinela-login-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sentinela-login-card input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(170, 111, 62, 0.26);
+  border-radius: 12px;
+  background: rgba(2, 4, 4, 0.55);
+  color: #f4efe8;
+  padding: 0 13px;
+  outline: none;
+}
+
+.sentinela-login-card input:focus {
+  border-color: rgba(217, 146, 82, 0.72);
+  box-shadow: 0 0 0 3px rgba(170, 111, 62, 0.14);
+}
+
+.sentinela-login-primary,
+.sentinela-login-secondary,
+.sentinela-login-footer a,
+.sentinela-login-footer button {
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(170, 111, 62, 0.26);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sentinela-login-primary {
+  background: linear-gradient(135deg, #d99252, #aa6f3e);
+  color: #11100f;
+}
+
+.sentinela-login-secondary,
+.sentinela-login-footer button {
+  background: rgba(255, 255, 255, 0.035);
+  color: #8f877d;
+  cursor: not-allowed;
+}
+
+.sentinela-login-footer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.sentinela-login-footer a {
+  color: #f4efe8;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  background: rgba(170, 111, 62, 0.08);
+}
+
+.sentinela-login-error {
+  color: #ff766d;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* SENTINELA Premium Human Cabin */
+.sentinela-human-premium {
+  --sentinela-graphite: #0b0d0d;
+  --sentinela-panel: #111514;
+  --sentinela-panel-soft: #171b19;
+  --sentinela-offwhite: #f4efe8;
+  --sentinela-muted: #b8b0a6;
+  --sentinela-copper: #d99252;
+  --sentinela-copper-deep: #aa6f3e;
+  --sentinela-amber: #d6a541;
+  --sentinela-red: #d9554a;
+  display: grid;
+  gap: 18px;
+  color: var(--sentinela-offwhite);
+}
+
+.sentinela-command-header,
+.sentinela-premium-metrics article,
+.sentinela-crisis-summary,
+.sentinela-tab-panel,
+.sentinela-review-card,
+.sentinela-decision-card,
+.sentinela-strategy-grid article,
+.sentinela-decision-list article,
+.sentinela-history-grid article,
+.sentinela-pricing-grid article {
+  border: 1px solid rgba(170, 111, 62, 0.22);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    rgba(17, 21, 20, 0.92);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
+}
+
+.sentinela-command-header > *,
+.sentinela-crisis-summary > *,
+.sentinela-tab-panel > *,
+.sentinela-review-card > *,
+.sentinela-decision-card > *,
+.sentinela-strategy-grid article > *,
+.sentinela-pricing-grid article > * {
+  min-width: 0;
+}
+
+.sentinela-command-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 320px);
+  gap: 18px;
+  align-items: stretch;
+  padding: clamp(20px, 4vw, 34px);
+  background:
+    linear-gradient(135deg, rgba(170, 111, 62, 0.14), transparent 42%),
+    rgba(11, 13, 13, 0.94);
+}
+
+.sentinela-command-header h1 {
+  max-width: 960px;
+  color: var(--sentinela-offwhite);
+  font-size: clamp(2.1rem, 4vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: 0;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+
+.sentinela-command-header p,
+.sentinela-command-header aside p,
+.sentinela-premium-metrics p,
+.sentinela-crisis-summary p,
+.sentinela-panel-heading p,
+.sentinela-review-card p,
+.sentinela-decision-card p,
+.sentinela-strategy-grid p,
+.sentinela-decision-list p,
+.sentinela-history-grid p,
+.sentinela-pricing-grid p {
+  color: var(--sentinela-muted);
+  line-height: 1.55;
+}
+
+.sentinela-command-header aside {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  border: 1px solid rgba(217, 146, 82, 0.28);
+  border-radius: 16px;
+  padding: 18px;
+  background: rgba(217, 146, 82, 0.07);
+}
+
+.sentinela-command-header aside span,
+.sentinela-premium-metrics span,
+.sentinela-review-card span,
+.sentinela-decision-topline span,
+.sentinela-strategy-grid span,
+.sentinela-decision-list span,
+.sentinela-history-grid span,
+.sentinela-pricing-grid span {
+  display: block;
+  color: var(--sentinela-copper);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sentinela-command-header aside strong {
+  color: var(--sentinela-offwhite);
+  font-size: 31px;
+  line-height: 1;
+}
+
+.sentinela-command-header aside small {
+  width: fit-content;
+  border: 1px solid rgba(217, 146, 82, 0.3);
+  border-radius: 999px;
+  color: var(--sentinela-copper);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.sentinela-premium-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sentinela-premium-metrics article {
+  min-height: 132px;
+  padding: 15px;
+}
+
+.sentinela-premium-metrics strong {
+  display: block;
+  margin-top: 9px;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.sentinela-crisis-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 360px);
+  gap: 16px;
+  align-items: center;
+  border-color: rgba(217, 85, 74, 0.34);
+  padding: 20px;
+}
+
+.sentinela-crisis-summary h2,
+.sentinela-panel-heading h2 {
+  color: var(--sentinela-offwhite);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.08;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+
+.traceability-strip {
+  display: grid;
+  gap: 8px;
+}
+
+.traceability-strip span {
+  border: 1px solid rgba(217, 146, 82, 0.22);
+  border-radius: 12px;
+  color: var(--sentinela-offwhite);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 9px 10px;
+  background: rgba(217, 146, 82, 0.07);
+}
+
+.sentinela-human-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.sentinela-human-tabs button {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(170, 111, 62, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--sentinela-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.sentinela-human-tabs button.active {
+  background: linear-gradient(135deg, rgba(217, 146, 82, 0.32), rgba(170, 111, 62, 0.14));
+  border-color: rgba(217, 146, 82, 0.58);
+  color: var(--sentinela-offwhite);
+}
+
+.sentinela-tab-panel {
+  display: grid;
+  gap: 15px;
+  padding: 18px;
+}
+
+.sentinela-panel-heading {
+  max-width: 920px;
+}
+
+.sentinela-client-grid,
+.sentinela-decision-grid,
+.sentinela-strategy-grid,
+.sentinela-history-grid,
+.sentinela-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sentinela-review-card,
+.sentinela-decision-card,
+.sentinela-strategy-grid article,
+.sentinela-decision-list article,
+.sentinela-history-grid article,
+.sentinela-pricing-grid article {
+  display: grid;
+  gap: 10px;
+  min-height: 150px;
+  padding: 16px;
+}
+
+.sentinela-review-card.critical,
+.sentinela-decision-card:has(.risk-critical) {
+  border-color: rgba(217, 85, 74, 0.36);
+}
+
+.sentinela-review-card.high {
+  border-color: rgba(214, 165, 65, 0.34);
+}
+
+.sentinela-review-card strong,
+.sentinela-decision-card strong,
+.sentinela-strategy-grid strong,
+.sentinela-decision-list strong,
+.sentinela-history-grid strong,
+.sentinela-pricing-grid strong {
+  color: var(--sentinela-offwhite);
+  font-size: 19px;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.sentinela-review-card small,
+.sentinela-action-state {
+  color: #dfd6ca;
+  line-height: 1.45;
+}
+
+.sentinela-decision-topline {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sentinela-decision-topline small {
+  border: 1px solid rgba(170, 111, 62, 0.22);
+  border-radius: 999px;
+  color: var(--sentinela-muted);
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.sentinela-human-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.sentinela-human-actions button,
+.sentinela-pricing-grid button {
+  min-height: 38px;
+  border: 1px solid rgba(170, 111, 62, 0.24);
+  border-radius: 10px;
+  background: rgba(170, 111, 62, 0.08);
+  color: var(--sentinela-offwhite);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 0 8px;
+}
+
+.sentinela-pricing-grid button:disabled {
+  cursor: not-allowed;
+  color: var(--sentinela-muted);
+}
+
+.sentinela-decision-list,
+.sentinela-evidence-table {
+  display: grid;
+  gap: 10px;
+}
+
+.sentinela-evidence-table [role="row"] {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(170, 111, 62, 0.18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.sentinela-evidence-table span {
+  color: var(--sentinela-copper);
+  font-weight: 900;
+}
+
+.sentinela-evidence-table strong {
+  color: var(--sentinela-offwhite);
+}
+
+.sentinela-evidence-table em,
+.sentinela-evidence-table small {
+  color: var(--sentinela-muted);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sentinela-pricing-grid ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  color: var(--sentinela-muted);
+}
+
+.risk-critical {
+  color: var(--sentinela-red) !important;
+}
+
+.risk-high {
+  color: var(--sentinela-amber) !important;
+}
+
+.risk-medium {
+  color: #d99252 !important;
+}
+
+.risk-low,
+.risk-safe {
+  color: #93c5ad !important;
+}
+
+@media (max-width: 1280px) {
+  .sentinela-premium-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sentinela-client-grid,
+  .sentinela-decision-grid,
+  .sentinela-strategy-grid,
+  .sentinela-history-grid,
+  .sentinela-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 940px) {
+  .human-cabin-shell:has(.sentinela-human-premium) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel {
+    width: 100%;
+  }
+
+  .sentinela-login-panel,
+  .sentinela-command-header,
+  .sentinela-crisis-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sentinela-premium-metrics,
+  .sentinela-client-grid,
+  .sentinela-decision-grid,
+  .sentinela-strategy-grid,
+  .sentinela-history-grid,
+  .sentinela-pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sentinela-evidence-table [role="row"] {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .sentinela-login-page {
+    padding: 12px;
+  }
+
+  .sentinela-login-copy,
+  .sentinela-login-card,
+  .sentinela-command-header,
+  .sentinela-tab-panel {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .sentinela-command-header h1 {
+    font-size: 25px;
+    line-height: 1.04;
+    max-width: 310px;
+  }
+
+  .sentinela-command-header p {
+    max-width: 310px;
+    font-size: 14px;
+  }
+
+  .sentinela-human-actions {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1269,5 +1956,50 @@ html, body {
   .sentinela-app-card {
     border-radius: 16px;
     padding: 15px;
+  }
+}
+
+/* SENTINELA Human Cabin final overrides, kept last on purpose. */
+.human-cabin-shell:has(.sentinela-human-premium) {
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+  display: none;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-mobile-nav {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-kpis strong {
+  font-size: 20px;
+}
+
+@media (max-width: 940px) {
+  .human-cabin-shell:has(.sentinela-human-premium) {
+    display: flex;
+    flex-direction: column;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header h1 {
+    max-width: 310px;
+    font-size: 25px;
+    line-height: 1.04;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header p {
+    max-width: 310px;
+    font-size: 14px;
   }
 }

@@ -19,6 +19,7 @@ type RuntimeStats = {
 
 const NAV = [
   { label: 'Overview', href: '/' },
+  { label: 'Cabina Humana', href: '/human-cabin' },
   { label: 'Runtime', href: '/runtime' },
   { label: 'Firewall IA', href: '/firewall' },
   { label: 'Agentes', href: '/agentes' },
@@ -35,10 +36,9 @@ const NAV = [
 
 const MOBILE_NAV = [
   { label: 'Inicio', href: '/' },
+  { label: 'Cabina', href: '/human-cabin' },
   { label: 'Alertas', href: '/incidentes' },
-  { label: 'Agentes', href: '/agentes' },
   { label: 'Reportes', href: '/reporte' },
-  { label: 'Perfil', href: '/login' },
 ];
 
 function dataStateStatus(state: DataState) {
@@ -58,15 +58,15 @@ function pillClass(status: string) {
 function sentinelaLocalReply(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes('permiso')) {
-    return 'Permisos en observacion: revisa capacidades de escritura, despliegue y acceso a datos antes de activar tareas reales.';
+    return 'Permisos en observación: revisa capacidades de escritura, despliegue y acceso a datos antes de activar tareas reales.';
   }
   if (normalized.includes('reporte')) {
-    return 'Reporte ejecutivo: proteccion activa, riesgo global medio y una alerta prioritaria sobre agente local con permisos sensibles.';
+    return 'Reporte ejecutivo: protección activa, riesgo global medio y una alerta prioritaria sobre permisos sensibles.';
   }
   if (normalized.includes('app') || normalized.includes('mirar')) {
-    return 'Mira primero FORJA, porque el agente local requiere control de permisos antes de ejecucion prolongada.';
+    return 'Mira primero la cola de decisiones humanas: allí está lo crítico, lo bloqueado y lo que requiere evidencia.';
   }
-  return 'Estoy protegiendo aplicaciones, agentes IA, datos sensibles y permisos criticos con una cabina local preparada, sin conexion externa real.';
+  return 'Estoy protegiendo aplicaciones, agentes IA, datos sensibles y permisos críticos con una cabina local preparada, sin conexión externa real.';
 }
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -77,7 +77,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'centinela',
-      text: 'CEO, estoy en guardia. Protejo aplicaciones, agentes, datos y permisos solo con evidencia verificable.',
+      text: 'Estoy en guardia. Protejo aplicaciones, agentes, datos y permisos solo con evidencia verificable.',
     },
   ]);
 
@@ -114,9 +114,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const evidenceCopy = useMemo(() => {
     if (isVerifiedData(dataState)) return 'Tengo evidencia autenticada del backend.';
-    if (dataState === 'auth_required') return 'Sesion requerida para ver datos.';
+    if (dataState === 'auth_required') return 'Sesión requerida para ver datos.';
     if (dataState === 'loading') return 'Estoy verificando el runtime.';
-    return 'No tengo evidencia suficiente para afirmar proteccion total.';
+    return 'No tengo evidencia suficiente para afirmar protección total.';
   }, [dataState]);
 
   function submitChat(event: React.FormEvent<HTMLFormElement>) {
@@ -143,7 +143,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="human-avatar shield-avatar" aria-hidden="true" />
           <div>
             <span>SENTINELA</span>
-            <strong>Doctor preventivo de ciberseguridad</strong>
+            <strong>Cabina premium de ciberseguridad defensiva</strong>
           </div>
         </div>
 
@@ -174,8 +174,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </article>
           <article>
             <span>Chat IA</span>
-            <strong>LOCAL PREPARED</strong>
-            <small>Sin conexion externa real.</small>
+            <strong>LOCAL</strong>
+            <small>Sin conexión externa real.</small>
           </article>
         </section>
 
@@ -221,16 +221,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <article>
               <div>
                 <span>Siguiente paso</span>
-                <strong>{isVerifiedData(dataState) ? 'Mantendre vigilancia.' : 'Necesito autenticacion.'}</strong>
+                <strong>{isVerifiedData(dataState) ? 'Mantendré vigilancia.' : 'Necesito autenticación.'}</strong>
               </div>
               <span className="status-pill warn">NEXT</span>
             </article>
           </div>
 
           <div className="human-prompt-grid">
-            <button type="button" onClick={() => ask('Que estas protegiendo?')}>Que proteges?</button>
-            <button type="button" onClick={() => ask('Que app debo mirar primero?')}>Que miro?</button>
-            <button type="button" onClick={() => ask('Que permisos debo revisar?')}>Permisos</button>
+            <button type="button" onClick={() => ask('Qué estás protegiendo?')}>Qué proteges?</button>
+            <button type="button" onClick={() => ask('Qué decisión debo mirar primero?')}>Qué miro?</button>
+            <button type="button" onClick={() => ask('Qué permisos debo revisar?')}>Permisos</button>
             <button type="button" onClick={() => ask('Dame reporte ejecutivo')}>Reporte</button>
           </div>
 

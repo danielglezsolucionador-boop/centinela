@@ -319,6 +319,25 @@ export const api = {
   async getPolicyStats() {
     return requestJson(`${API_URL}/api/v1/policy/all`, { headers: authHeaders() });
   },
+  async getHumanCabinSummary() {
+    return requestJson(`${API_URL}/api/v1/human-cabin/summary`, { headers: authHeaders() });
+  },
+  async getHumanCabinRequests() {
+    return requestJson(`${API_URL}/api/v1/human-cabin/requests`, { headers: authHeaders() });
+  },
+  async getHumanCabinAudit() {
+    return requestJson(`${API_URL}/api/v1/human-cabin/audit`, { headers: authHeaders() });
+  },
+  async getHumanCabinPricing() {
+    return requestJson(`${API_URL}/api/v1/human-cabin/pricing`, { headers: authHeaders() });
+  },
+  async humanCabinAction(requestId: string, action: 'approve' | 'reject' | 'pause' | 'more-evidence' | 'escalate' | 'false-positive' | 'close' | 'accept-risk' | 'block-sensitive-action' | 'executive-report', notes?: string) {
+    return requestJson(`${API_URL}/api/v1/human-cabin/requests/${requestId}/${action}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ notes: notes || 'Acción humana registrada desde cabina local.' }),
+    });
+  },
 };
 
 export function createWebSocket(onMessage: (data: unknown) => void) {
