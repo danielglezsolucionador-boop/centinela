@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://centinela-backend-kzwk.onrender.com';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://centinela-backend.vercel.app';
 const DEMO_USERNAME = process.env.NEXT_PUBLIC_CENTINELA_DEMO_USERNAME;
 const DEMO_PASSWORD = process.env.NEXT_PUBLIC_CENTINELA_DEMO_PASSWORD;
 
