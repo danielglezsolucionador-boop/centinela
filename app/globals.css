@@ -861,11 +861,23 @@ html, body {
 
 /* Final route-specific overrides for SENTINELA Human Cabin */
 .human-cabin-shell:has(.sentinela-human-premium) {
-  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(230px, 280px) minmax(440px, 1fr) minmax(300px, 340px);
+  gap: 18px;
+  padding: 18px;
 }
 
 .human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
-  display: none;
+  display: block;
+  height: calc(100vh - 36px);
+  top: 18px;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-chat-card {
+  padding: 22px;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading strong {
+  font-size: 24px;
 }
 
 .human-cabin-shell:has(.sentinela-human-premium) .human-mobile-nav {
@@ -888,9 +900,28 @@ html, body {
   }
 
   .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel,
-  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel {
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
     width: 100%;
     max-width: 100%;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel {
+    order: 2;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+    order: 3;
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-card {
+    min-height: 520px;
   }
 }
 
@@ -2039,5 +2070,134 @@ html, body {
   .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header p {
     max-width: 310px;
     font-size: 14px;
+  }
+}
+
+/* CEO final requirement: keep the existing SENTINELA talk panel visible in Human Cabin. */
+.human-cabin-shell:has(.sentinela-human-premium) {
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(300px, 360px);
+  gap: 18px;
+  padding: 18px;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+  display: block;
+  height: calc(100vh - 36px);
+  top: 18px;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-chat-card {
+  padding: 22px;
+}
+
+.human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading strong {
+  font-size: 24px;
+}
+
+@media (max-width: 1320px) {
+  .sentinela-hero,
+  .sentinela-priority {
+    grid-template-columns: 1fr;
+  }
+
+  .sentinela-hero h1 {
+    font-size: clamp(2rem, 3.4vw, 2.9rem);
+  }
+
+  .sentinela-summary-grid,
+  .sentinela-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header,
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-crisis-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header h1 {
+    font-size: clamp(2rem, 3.2vw, 2.7rem);
+  }
+}
+
+@media (max-width: 940px) {
+  .human-cabin-shell:has(.sentinela-human-premium) {
+    display: flex;
+    flex-direction: column;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel {
+    order: 2;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-right-panel {
+    order: 3;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-card {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 520px) {
+  .human-cabin-shell:has(.sentinela-human-premium) {
+    padding: 10px 10px 112px;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-left-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-center-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-right-panel,
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-human-premium,
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header,
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-crisis-summary,
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-tab-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .sentinela-command-header h1 {
+    max-width: 100%;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading small {
+    grid-column: 2;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading strong,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-message {
+    overflow-wrap: anywhere;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-heading strong {
+    max-width: 320px;
+    font-size: 22px;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-prompt-grid,
+  .human-cabin-shell:has(.sentinela-human-premium) .human-chat-form {
+    grid-template-columns: 1fr;
+  }
+
+  .human-cabin-shell:has(.sentinela-human-premium) .human-mobile-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

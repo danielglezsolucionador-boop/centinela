@@ -191,7 +191,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {children}
       </main>
 
-      <aside className="human-right-panel">
+      <aside className="human-right-panel" id="sentinela-talk-panel" aria-label="SENTINELA habla">
         <section className="human-chat-card">
           <header className="human-chat-heading">
             <div className="human-avatar shield-avatar" aria-hidden="true" />
