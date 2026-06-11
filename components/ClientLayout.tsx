@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { api, ensureToken } from '@/lib/api';
@@ -181,9 +180,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         <nav className="human-nav" aria-label="Navegacion CENTINELA">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
+            <a key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
               {item.label}
-            </Link>
+            </a>
           ))}
         </nav>
       </aside>
@@ -251,9 +250,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       <nav className="human-mobile-nav" aria-label="Navegacion mobile SENTINELA">
         {MOBILE_NAV.map((item) => (
-          <Link key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
+          <a key={item.href} href={item.href} className={pathname === item.href ? 'active' : ''}>
             {item.label}
-          </Link>
+          </a>
         ))}
       </nav>
     </div>
