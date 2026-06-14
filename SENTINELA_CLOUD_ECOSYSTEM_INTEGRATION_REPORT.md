@@ -52,7 +52,7 @@ Fecha/hora local: 2026-06-11 04:30 America/Lima
 ## Cloud
 
 - Frontend cloud declarado por el repo: `https://centinela-alpha.vercel.app`.
-- Backend cloud declarado por el frontend: `https://centinela-backend-kzwk.onrender.com`.
+- Backend cloud declarado por el frontend: `https://centinela-backend.vercel.app`.
 - Push frontend ejecutado a `origin/main`.
 - Auto-deploy Vercel reflejado en producción.
 - `/`: HTTP 200.
@@ -71,7 +71,7 @@ Fecha/hora local: 2026-06-11 04:30 America/Lima
 
 - El working tree contiene archivos untracked antiguos no relacionados. No deben incluirse en este cierre.
 - El build local detecta rutas untracked bajo `app/api/`; no se agregarán al commit de este cierre.
-- Backend Render no respondió health durante la validación final. No se tocó backend en este cierre.
+- Backend Vercel no respondió health durante la validación final. No se tocó backend en este cierre.
 
 ## Estado
 
